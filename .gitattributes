@@ -1,0 +1,7 @@
+# El repositorio guarda LF siempre: los scripts del workflow corren en Linux
+# y un CRLF ahí rompe la compilación.
+* text=auto eol=lf
+*.png binary
+*.jpg binary
+*.ttf binary
+*.keystore binary
