@@ -277,6 +277,11 @@ baste para recalcular.
 número en sus `useMemo`, así que una escritura en cualquier parte actualiza todo lo que
 la observa sin suscripciones manuales por tabla.
 
+**Los gráficos necesitan un compañero.** `react-native-gifted-charts` hace `require` de un
+paquete de degradados al cargarse y lanza si no lo encuentra; se usa `expo-linear-gradient`,
+que es el del ecosistema Expo. Hay una prueba que lo comprueba, porque ni TypeScript ni el
+empaquetado detectan ese tipo de dependencia.
+
 **Sin librerías nativas fuera de Expo.** El slider, el mapa de calor, la cascada, los
 anillos de progreso y el teclado numérico están hechos con `View`, `PanResponder` y
 `react-native-svg`. Por eso `eas build` funciona sin tocar Gradle.
