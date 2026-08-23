@@ -17,7 +17,6 @@ import { useOnboarding } from '@/store/onboarding';
 import { useAjustes } from '@/store/ajustes';
 import { useDatos } from '@/store/datos';
 import { archivarCategoria, crearIngreso, guardarDistribucion } from '@/db/crud';
-import { pedirPermisoNotificaciones, programarResumenSemanal } from '@/servicios/notificaciones';
 import { format } from 'date-fns';
 
 const DIAS_CICLO = [1, 5, 10, 15, 20, 25, 30];
@@ -29,7 +28,7 @@ export default function PasoPreferencias() {
   const refrescar = useDatos((s) => s.refrescar);
   const [guardando, setGuardando] = useState(false);
 
-  const finalizar = async () => {
+  const finalizar = () => {
     setGuardando(true);
     try {
       // 1. Ingresos
@@ -46,11 +45,10 @@ export default function PasoPreferencias() {
       })));
       // 3. Categorias desactivadas -> archivadas (no se borran: conservan historia)
       ob.categoriasDesactivadas.forEach((id) => archivarCategoria(id, true));
-      // 4. Preferencias
-      if (ob.notificaciones) {
-        const ok = await pedirPermisoNotificaciones();
-        if (ok) await programarResumenSemanal();
-      }
+      // 4. Preferencias. El permiso de notificaciones NO se pide aquí a
+      //    propósito: este es el camino crítico que deja la app configurada,
+      //    y no debe depender de ningún módulo nativo. Se pide ya dentro de
+      //    la app, en el primer render del inicio.
       aplicar({
         nombre: ob.nombre || 'Mi cuenta',
         diaInicioCiclo: ob.diaInicioCiclo,

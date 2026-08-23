@@ -1,4 +1,4 @@
-import { useCallback, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { Pressable, RefreshControl, ScrollView, View, useWindowDimensions } from 'react-native';
 import { router, useFocusEffect } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -25,18 +25,27 @@ import { usePeriodo } from '@/store/periodo';
 import { useAjustes } from '@/store/ajustes';
 import { useDatos, conRefresco } from '@/store/datos';
 import { listarMovimientos, recurrentesVencidos, confirmarRecurrente, omitirRecurrente } from '@/db/crud';
+import { configurarNotificacionesUnaVez } from '@/servicios/notificaciones';
 import { FilaMovimiento } from '@/ui/comp/FilaMovimiento';
 
 export default function Inicio() {
   const t = useTema();
   const { width } = useWindowDimensions();
   const nombre = useAjustes((s) => s.nombre);
+  const notificaciones = useAjustes((s) => s.notificaciones);
   const { mover, offset } = usePeriodo();
   const { metas, tarjetas, revision, refrescar } = useDatos();
   const r = useResumen();
   const [refrescando, setRefrescando] = useState(false);
 
   useFocusEffect(useCallback(() => { refrescar(); }, [refrescar]));
+
+  // Las notificaciones se configuran aquí, no en el onboarding: si el módulo
+  // nativo fallara, ya estamos dentro de la app y el fallo queda acotado.
+  useEffect(() => {
+    const id = setTimeout(() => { configurarNotificacionesUnaVez(notificaciones); }, 2000);
+    return () => clearTimeout(id);
+  }, [notificaciones]);
 
   const acumulado = useMemo(() => acumuladoDiario(r.rango), [r.rango, revision]);
   const acumuladoAnterior = useMemo(() => acumuladoDiario(r.anterior, false), [r.anterior, revision]);

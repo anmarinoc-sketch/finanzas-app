@@ -166,6 +166,15 @@ const MIGRACIONES: string[] = [
     activa INTEGER NOT NULL DEFAULT 1
   );
   `,
+  // v2: tabla de diagnostico. Guarda el contador de arranques fallidos y el
+  // ultimo error, para poder entrar en modo recuperacion en vez de quedarse
+  // en un bucle de cierres.
+  `
+  CREATE TABLE IF NOT EXISTS diagnostico (
+    clave TEXT PRIMARY KEY,
+    valor TEXT
+  );
+  `,
 ];
 
 /** Aplica las migraciones pendientes. Devuelve la version final. */

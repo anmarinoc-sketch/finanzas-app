@@ -12,28 +12,71 @@ import { sembrarCatalogos } from '@/db/seed';
 import { useAjustes } from '@/store/ajustes';
 import { useDatos } from '@/store/datos';
 import { ProveedorTema, useTema } from '@/ui/TemaProvider';
+import { PantallaRecuperacion } from '@/ui/PantallaRecuperacion';
+import {
+  SEGUNDOS_ESTABLE, confirmarArranque, guardarError,
+  instalarManejadorGlobal, registrarArranque,
+} from '@/servicios/diagnostico';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
-// Muestra una pantalla de error legible en vez de cerrarse en silencio si algo falla.
+// Pantalla de error legible de expo-router en vez de un cierre en silencio.
 export { ErrorBoundary } from 'expo-router';
 
 export default function LayoutRaiz() {
-  const [listo, setListo] = useState(false);
+  const [estado, setEstado] = useState<'cargando' | 'listo' | 'recuperacion'>('cargando');
   const cargar = useAjustes((s) => s.cargar);
   const refrescar = useDatos((s) => s.refrescar);
 
   useEffect(() => {
-    // Orden importante: esquema -> catalogos base -> preferencias -> catalogos en memoria.
-    migrar();
-    sembrarCatalogos();
-    cargar();
-    refrescar();
-    setListo(true);
-    SplashScreen.hideAsync().catch(() => {});
+    try {
+      // Orden importante: esquema -> diagnostico -> catalogos -> preferencias.
+      migrar();
+      instalarManejadorGlobal();
+
+      const { recuperacion } = registrarArranque();
+      if (recuperacion) {
+        setEstado('recuperacion');
+        SplashScreen.hideAsync().catch(() => {});
+        return;
+      }
+
+      sembrarCatalogos();
+      cargar();
+      refrescar();
+      setEstado('listo');
+    } catch (e) {
+      // Si el arranque falla, se registra y se entra en recuperacion en vez
+      // de dejar la pantalla en blanco.
+      guardarError(e, 'arranque de la app', true);
+      setEstado('recuperacion');
+    } finally {
+      SplashScreen.hideAsync().catch(() => {});
+    }
   }, [cargar, refrescar]);
 
-  if (!listo) return null;
+  // Si la app sobrevive unos segundos, el arranque cuenta como bueno.
+  useEffect(() => {
+    if (estado !== 'listo') return;
+    const id = setTimeout(confirmarArranque, SEGUNDOS_ESTABLE * 1000);
+    return () => clearTimeout(id);
+  }, [estado]);
+
+  if (estado === 'cargando') return null;
+
+  if (estado === 'recuperacion') {
+    return (
+      <SafeAreaProvider>
+        <StatusBar style="light" />
+        <PantallaRecuperacion
+          onContinuar={() => {
+            try { sembrarCatalogos(); cargar(); refrescar(); setEstado('listo'); }
+            catch (e) { guardarError(e, 'salida de recuperación', true); }
+          }}
+        />
+      </SafeAreaProvider>
+    );
+  }
 
   return (
     <GestureHandlerRootView style={{ flex: 1 }}>

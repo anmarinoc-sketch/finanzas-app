@@ -37,6 +37,9 @@ export default function PasoIngresos() {
     [ingresos],
   );
 
+  /** ¿Hay un ingreso escrito en el formulario pero todavía sin agregar? */
+  const pendiente = nom.trim().length > 0 && parsearMonto(monto) > 0;
+
   const agregar = () => {
     const m = parsearMonto(monto);
     if (!nom.trim()) return setError('Ponle un nombre al ingreso.');
@@ -44,6 +47,19 @@ export default function PasoIngresos() {
     setError(null);
     agregarIngreso({ nombre: nom.trim(), monto: Math.round(m), frecuencia: frec });
     setNom(''); setMonto(''); setFrec('mensual');
+  };
+
+  /**
+   * Con un solo ingreso basta para continuar. Si el usuario lo escribió pero
+   * no pulsó "Agregar", se agrega solo: obligarle a pulsar dos botones para
+   * un caso tan común era una trampa.
+   */
+  const continuar = () => {
+    if (pendiente) {
+      agregarIngreso({ nombre: nom.trim(), monto: Math.round(parsearMonto(monto)), frecuencia: frec });
+      setNom(''); setMonto(''); setFrec('mensual');
+    }
+    router.push('/onboarding/distribucion');
   };
 
   return (
@@ -55,10 +71,10 @@ export default function PasoIngresos() {
       pie={
         <>
           <Boton
-            titulo={ingresos.length ? 'Continuar' : 'Agrega al menos un ingreso'}
+            titulo={ingresos.length === 0 && !pendiente ? 'Escribe tu ingreso para continuar' : 'Continuar'}
             ancho
-            deshabilitado={!ingresos.length}
-            onPress={() => router.push('/onboarding/distribucion')}
+            deshabilitado={ingresos.length === 0 && !pendiente}
+            onPress={continuar}
           />
           <Pressable onPress={() => router.push('/onboarding/distribucion')} accessibilityRole="button">
             <Texto variante="etiqueta" color="tenue" style={{ textAlign: 'center', paddingVertical: 6 }}>
@@ -95,7 +111,16 @@ export default function PasoIngresos() {
               ))}
             </View>
           </View>
-          <Boton titulo="Agregar ingreso" icono="add" onPress={agregar} variante="secundario" ancho />
+          <Boton
+            titulo={ingresos.length ? 'Agregar otro ingreso' : 'Agregar y registrar otro'}
+            icono="add"
+            onPress={agregar}
+            variante="secundario"
+            ancho
+          />
+          <Texto variante="micro" color="tenue" style={{ textAlign: 'center' }}>
+            Con un solo ingreso es suficiente. Usa este botón solo si tienes más de una fuente.
+          </Texto>
         </Tarjeta>
 
         {ingresos.length === 0 ? (

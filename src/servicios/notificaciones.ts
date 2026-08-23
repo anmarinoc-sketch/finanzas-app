@@ -88,3 +88,21 @@ export async function programarResumenSemanal() {
 export async function cancelarTodas() {
   await Notifications.cancelAllScheduledNotificationsAsync();
 }
+
+/**
+ * Configura las notificaciones una sola vez, ya dentro de la app y no
+ * durante el onboarding. Nunca lanza: si el modulo nativo falla, la app
+ * sigue funcionando y el error queda registrado en el diagnostico.
+ */
+export async function configurarNotificacionesUnaVez(activadas: boolean) {
+  const { leerBandera, escribirBandera, guardarError } = await import('./diagnostico');
+  if (!activadas) return;
+  if (leerBandera('notificaciones_listas') === '1') return;
+  try {
+    const ok = await pedirPermisoNotificaciones();
+    if (ok) await programarResumenSemanal();
+    escribirBandera('notificaciones_listas', '1');
+  } catch (e) {
+    guardarError(e, 'configuración de notificaciones');
+  }
+}
