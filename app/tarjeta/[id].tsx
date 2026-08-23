@@ -18,27 +18,23 @@ import { esp } from '@/ui/tema';
 
 import { formatoCOP } from '@/core/dinero';
 import { diasParaPago, eaAEm } from '@/core/deudas';
-import { cicloDe } from '@/core/fechas';
 import {
-  borrarTarjeta, comprasACuotas, listarMovimientos, obtenerTarjeta, saldoTarjeta,
+  borrarTarjeta, comprasACuotas, listarMovimientos, obtenerTarjeta, saldosTarjeta,
 } from '@/db/crud';
-import { useAjustes } from '@/store/ajustes';
 import { useDatos, conRefresco } from '@/store/datos';
 
 export default function DetalleTarjeta() {
   const t = useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const tarjetaId = Number(id);
-  const diaInicio = useAjustes((s) => s.diaInicioCiclo);
   const { revision, refrescar } = useDatos();
 
   useFocusEffect(useCallback(() => { refrescar(); }, [refrescar]));
 
   const tarjeta = useMemo(() => obtenerTarjeta(tarjetaId), [tarjetaId, revision]);
-  const ciclo = cicloDe(new Date(), diaInicio);
-  const saldo = useMemo(
-    () => (tarjeta ? saldoTarjeta(tarjetaId, ciclo.desde) : 0),
-    [tarjeta, tarjetaId, ciclo.desde, revision],
+  const s = useMemo(
+    () => saldosTarjeta(tarjetaId),
+    [tarjetaId, revision],
   );
   const diferidas = useMemo(() => comprasACuotas(tarjetaId), [tarjetaId, revision]);
   const movimientos = useMemo(
@@ -55,7 +51,7 @@ export default function DetalleTarjeta() {
     );
   }
 
-  const uso = tarjeta.cupoTotal > 0 ? saldo / tarjeta.cupoTotal : 0;
+  const uso = tarjeta.cupoTotal > 0 ? s.deudaTotal / tarjeta.cupoTotal : 0;
   const dias = diasParaPago(tarjeta.diaPago);
   const cargaCuotas = diferidas.reduce((a, c) => a + c.cuota, 0);
 
@@ -83,8 +79,11 @@ export default function DetalleTarjeta() {
             </Texto>
           </View>
           <View>
-            <Texto variante="micro" style={{ color: 'rgba(255,255,255,0.8)' }}>SALDO ACTUAL</Texto>
-            <Texto variante="montoHero" style={{ color: '#FFFFFF' }}>{formatoCOP(saldo)}</Texto>
+            <Texto variante="micro" style={{ color: 'rgba(255,255,255,0.8)' }}>DEBES HOY</Texto>
+            <Texto variante="montoHero" style={{ color: '#FFFFFF' }}>{formatoCOP(s.saldoActual)}</Texto>
+            <Texto variante="micro" style={{ color: 'rgba(255,255,255,0.8)', marginTop: 2 }}>
+              Deuda total con cuotas pendientes: {formatoCOP(s.deudaTotal)}
+            </Texto>
           </View>
           <View style={{ flexDirection: 'row' }}>
             <View style={{ flex: 1 }}>
@@ -93,7 +92,7 @@ export default function DetalleTarjeta() {
             </View>
             <View style={{ alignItems: 'flex-end' }}>
               <Texto variante="micro" style={{ color: 'rgba(255,255,255,0.8)' }}>DISPONIBLE</Texto>
-              <Texto variante="monto" style={{ color: '#FFFFFF' }}>{formatoCOP(Math.max(0, tarjeta.cupoTotal - saldo))}</Texto>
+              <Texto variante="monto" style={{ color: '#FFFFFF' }}>{formatoCOP(Math.max(0, tarjeta.cupoTotal - s.deudaTotal))}</Texto>
             </View>
           </View>
           <BarraProgreso valor={uso} color="#FFFFFF" fondo="rgba(255,255,255,0.3)" alto={8} />

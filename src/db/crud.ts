@@ -128,6 +128,16 @@ export const borrarCategoria = (id: number) => {
   });
 };
 
+/** Movimientos que usan una categoria o cualquiera de sus subcategorias. */
+export function contarMovimientosCategoria(id: number): number {
+  return bdNativa.getFirstSync<{ n: number }>(
+    `SELECT COUNT(*) AS n FROM transacciones t
+       LEFT JOIN categorias c ON c.id = t.categoria_id
+      WHERE t.categoria_id = ?1 OR c.padre_id = ?1`,
+    [id],
+  )?.n ?? 0;
+}
+
 export function reordenarCategorias(ids: number[]) {
   bdNativa.withTransactionSync(() => {
     ids.forEach((id, i) => db.update(categorias).set({ orden: i }).where(eq(categorias.id, id)).run());
@@ -162,6 +172,33 @@ export function saldoCuenta(id: number): number {
   return c.saldoInicial + (r?.mov ?? 0);
 }
 
+/**
+ * Concilia una cuenta con su saldo real. En vez de tocar el saldo inicial a
+ * escondidas -que es lo que hace que "aparezca" o "desaparezca" dinero sin
+ * rastro-, registra un movimiento de ajuste visible y etiquetado. Asi la
+ * diferencia queda documentada, se puede buscar en el historial y los totales
+ * siguen cuadrando.
+ */
+export function conciliarCuenta(cuentaId: number, saldoReal: number, nota?: string) {
+  const actual = saldoCuenta(cuentaId);
+  const diferencia = Math.round(saldoReal - actual);
+  if (diferencia === 0) return { diferencia: 0, id: 0 };
+  const hoy = iso(new Date());
+  const id = crearTransaccion({
+    tipo: diferencia > 0 ? 'ingreso' : 'gasto',
+    monto: Math.abs(diferencia),
+    fecha: hoy,
+    categoriaId: null,
+    cuentaId,
+    medioPago: 'otro',
+    descripcion: 'Ajuste de saldo',
+    notas: nota ?? `Conciliación con el saldo real (${diferencia > 0 ? 'faltaba' : 'sobraba'} en la app)`,
+    etiquetas: 'ajuste',
+    creadoEn: ahoraISO(),
+  } as NuevaTransaccion);
+  return { diferencia, id };
+}
+
 export const saldoConsolidado = () =>
   listarCuentas().reduce((t, c) => t + saldoCuenta(c.id), 0);
 
@@ -184,20 +221,45 @@ export const borrarTarjeta = (id: number) => {
   });
 };
 
+export type SaldosTarjeta = {
+  /** Cuotas ya causadas (fecha <= hoy). */
+  causado: number;
+  /** Cuotas de compras diferidas que aun no se causan. */
+  futuro: number;
+  /** Pagos registrados a la tarjeta, de todo el historico. */
+  pagos: number;
+  /** Lo que se debe hoy: causado - pagos. Puede ser negativo si hay saldo a favor. */
+  saldoActual: number;
+  /** Deuda total comprometida, incluyendo las cuotas que faltan por causarse. */
+  deudaTotal: number;
+};
+
 /**
- * Saldo de la tarjeta: cuotas causadas desde el inicio del ciclo vigente mas
- * todas las cuotas futuras, menos los pagos registrados contra la tarjeta.
- * Es "lo que todavia le debo al banco" en terminos utiles para el usuario.
+ * Saldos de una tarjeta, sobre TODO el historico.
+ *
+ * La version anterior solo miraba desde el inicio del ciclo vigente, asi que
+ * ignoraba las compras sin pagar de meses anteriores y tambien los pagos
+ * hechos antes del corte: dos fuentes seguras de descuadre. Ademas recortaba
+ * el resultado a cero con Math.max, lo que escondia un saldo a favor en vez
+ * de mostrarlo. Aqui no se recorta nada: si sobra dinero, se ve.
  */
-export function saldoTarjeta(tarjetaId: number, desde: Date): number {
-  const r = bdNativa.getFirstSync<{ gastos: number; pagos: number }>(
+export function saldosTarjeta(tarjetaId: number): SaldosTarjeta {
+  const r = bdNativa.getFirstSync<{ causado: number; futuro: number; pagos: number }>(
     `SELECT
-       COALESCE(SUM(CASE WHEN tipo = 'gasto' AND fecha >= ?2 THEN monto ELSE 0 END), 0) AS gastos,
-       COALESCE(SUM(CASE WHEN tipo = 'transferencia' AND fecha >= ?2 THEN monto ELSE 0 END), 0) AS pagos
+       COALESCE(SUM(CASE WHEN tipo = 'gasto' AND fecha <= date('now','localtime') THEN monto ELSE 0 END), 0) AS causado,
+       COALESCE(SUM(CASE WHEN tipo = 'gasto' AND fecha >  date('now','localtime') THEN monto ELSE 0 END), 0) AS futuro,
+       COALESCE(SUM(CASE WHEN tipo = 'transferencia' THEN monto ELSE 0 END), 0) AS pagos
      FROM transacciones WHERE tarjeta_id = ?1`,
-    [tarjetaId, iso(desde)],
+    [tarjetaId],
   );
-  return Math.max(0, (r?.gastos ?? 0) - (r?.pagos ?? 0));
+  const causado = r?.causado ?? 0;
+  const futuro = r?.futuro ?? 0;
+  const pagos = r?.pagos ?? 0;
+  return {
+    causado, futuro, pagos,
+    saldoActual: causado - pagos,
+    deudaTotal: causado + futuro - pagos,
+  };
 }
 
 export type CompraDiferida = {

@@ -19,7 +19,7 @@ import { formatoCOP, parsearMonto, separarMiles } from '@/core/dinero';
 import { ICONOS_DISPONIBLES } from '@/constantes/categorias';
 import { COLORES_CATEGORIA } from '@/constantes/paleta';
 import {
-  actualizarCategoria, archivarCategoria, borrarCategoria, crearCategoria,
+  actualizarCategoria, archivarCategoria, borrarCategoria, contarMovimientosCategoria, crearCategoria,
   listarCategorias, reordenarCategorias,
 } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
@@ -44,6 +44,25 @@ export default function Categorias() {
     if (destino < 0 || destino >= ids.length) return;
     [ids[idx], ids[destino]] = [ids[destino], ids[idx]];
     conRefresco(() => reordenarCategorias(ids));
+  };
+
+  /**
+   * Borrado directo desde la lista. Antes había que archivar, desplegar las
+   * archivadas y borrar desde ahí: nadie lo encontraba. Avisa de cuántos
+   * movimientos quedarán sin categoría, porque el dinero NUNCA se borra.
+   */
+  const eliminar = (cat: Categoria) => {
+    const usos = contarMovimientosCategoria(cat.id);
+    const detalle = usos > 0
+      ? `Hay ${usos} ${usos === 1 ? 'movimiento registrado' : 'movimientos registrados'} en "${cat.nombre}". No se borran: quedan sin categoría y sus montos siguen contando en tus totales.
+
+Si prefieres conservarlos agrupados, archívala en vez de borrarla.`
+      : `"${cat.nombre}" no tiene movimientos. Se puede borrar sin consecuencias.`;
+    Alert.alert('Eliminar categoría', detalle, [
+      { text: 'Cancelar', style: 'cancel' },
+      ...(usos > 0 ? [{ text: 'Mejor archivar', onPress: () => conRefresco(() => archivarCategoria(cat.id, true)) }] : []),
+      { text: 'Eliminar', style: 'destructive' as const, onPress: () => conRefresco(() => borrarCategoria(cat.id)) },
+    ]);
   };
 
   const nueva = (): Categoria => ({
@@ -84,6 +103,9 @@ export default function Categorias() {
                 <Pressable onPress={() => setEditando(c)} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Editar ${c.nombre}`}>
                   <Ionicons name="create-outline" size={20} color={t.acento} />
                 </Pressable>
+                <Pressable onPress={() => eliminar(c)} hitSlop={6} accessibilityRole="button" accessibilityLabel={`Eliminar ${c.nombre}`}>
+                  <Ionicons name="trash-outline" size={19} color={t.rojo} />
+                </Pressable>
               </View>
 
               {subs.length ? (
@@ -113,6 +135,15 @@ export default function Categorias() {
             </Tarjeta>
           );
         })}
+
+        <Boton
+          titulo="Crear categoría"
+          icono="add"
+          variante="secundario"
+          ancho
+          onPress={() => setEditando(nueva())}
+          style={{ marginTop: esp.sm }}
+        />
 
         {archivadas.length ? (
           <>

@@ -432,6 +432,13 @@ export default function Registro() {
       </ScrollView>
 
       <Hoja visible={hojaCategoria} onCerrar={() => setHojaCategoria(false)} titulo="Elegir categoría" alto="70%">
+        <Boton
+          titulo="Crear o editar categorías"
+          icono="options-outline"
+          variante="secundario"
+          ancho
+          onPress={() => { setHojaCategoria(false); router.push('/categorias'); }}
+        />
         <View style={{ gap: 2 }}>
           {categoriasRaiz.map((c) => (
             <Pressable

@@ -17,7 +17,7 @@ import { esp, radio } from '@/ui/tema';
 
 import { formatoCOP, parsearMonto, separarMiles } from '@/core/dinero';
 import { COLORES_CATEGORIA } from '@/constantes/paleta';
-import { borrarCuenta, crearCuenta, saldoCuenta } from '@/db/crud';
+import { borrarCuenta, conciliarCuenta, crearCuenta, saldoCuenta } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
 import type { TipoCuenta } from '@/db/schema';
 
@@ -37,6 +37,8 @@ export default function Cuentas() {
   const [saldoInicial, setSaldoInicial] = useState('');
   const [tipo, setTipo] = useState<TipoCuenta>('bancaria');
   const [color, setColor] = useState<string>('#3B82F6');
+  const [conciliando, setConciliando] = useState<{ id: number; nombre: string; saldo: number } | null>(null);
+  const [saldoReal, setSaldoReal] = useState('');
 
   useFocusEffect(useCallback(() => { refrescar(); }, [refrescar]));
 
@@ -45,6 +47,43 @@ export default function Cuentas() {
     [cuentas, revision],
   );
   const consolidado = saldos.reduce((a, s) => a + s.saldo, 0);
+
+  /**
+   * Compara el saldo real con el calculado y deja constancia de la diferencia
+   * como un movimiento de ajuste. Nunca se corrige el saldo inicial en
+   * silencio: así ningún peso aparece ni desaparece sin explicación.
+   */
+  const conciliar = () => {
+    if (!conciliando) return;
+    const real = Math.round(parsearMonto(saldoReal));
+    const dif = real - conciliando.saldo;
+    if (dif === 0) {
+      Alert.alert('Todo cuadra', 'El saldo de la app coincide exactamente con el que ingresaste.');
+      setConciliando(null); setSaldoReal('');
+      return;
+    }
+    Alert.alert(
+      'Hay una diferencia',
+      `La app dice ${formatoCOP(conciliando.saldo)} y tú tienes ${formatoCOP(real)}.
+
+` +
+      `Diferencia: ${formatoCOP(dif, { signo: true })}.
+
+` +
+      'Se registrará un movimiento de "Ajuste de saldo" con esa diferencia, etiquetado como "ajuste", ' +
+      'para que quede visible en el historial y puedas buscar después qué se te olvidó registrar.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Registrar ajuste',
+          onPress: () => {
+            conRefresco(() => conciliarCuenta(conciliando.id, real));
+            setConciliando(null); setSaldoReal('');
+          },
+        },
+      ],
+    );
+  };
 
   const guardar = () => {
     if (!nombre.trim()) return Alert.alert('Falta el nombre', 'Ponle un nombre a la cuenta.');
@@ -95,6 +134,12 @@ export default function Cuentas() {
               <Texto variante="micro" color="tenue">inicial {formatoCOP(c.saldoInicial)}</Texto>
             </View>
             <Pressable
+              onPress={() => { setConciliando({ id: c.id, nombre: c.nombre, saldo }); setSaldoReal(''); }}
+              hitSlop={10} accessibilityRole="button" accessibilityLabel={`Conciliar ${c.nombre}`}
+            >
+              <Ionicons name="checkmark-done-outline" size={19} color={t.acento} />
+            </Pressable>
+            <Pressable
               onPress={() => Alert.alert('Eliminar cuenta', `¿Borrar "${c.nombre}"? Los movimientos se conservan.`, [
                 { text: 'Cancelar', style: 'cancel' },
                 { text: 'Eliminar', style: 'destructive', onPress: () => conRefresco(() => borrarCuenta(c.id)) },
@@ -108,6 +153,31 @@ export default function Cuentas() {
 
         <Boton titulo="Nueva cuenta" icono="add" variante="secundario" ancho onPress={() => setHoja(true)} />
       </ScrollView>
+
+      <Hoja
+        visible={conciliando !== null}
+        onCerrar={() => setConciliando(null)}
+        titulo={`Cuadrar ${conciliando?.nombre ?? ''}`}
+        alto="60%"
+      >
+        <Tarjeta style={{ gap: 4 }}>
+          <Texto variante="micro" color="tenue">SEGÚN LA APP</Texto>
+          <Texto variante="montoGrande">{formatoCOP(conciliando?.saldo ?? 0)}</Texto>
+        </Tarjeta>
+        <Campo
+          etiqueta="¿Cuánto tienes en realidad?"
+          value={saldoReal ? separarMiles(parsearMonto(saldoReal)) : ''}
+          onChangeText={setSaldoReal}
+          keyboardType="number-pad"
+          placeholder="Mira el saldo en tu banco o cuenta el efectivo"
+        />
+        <Texto variante="micro" color="suave" style={{ lineHeight: 18 }}>
+          Si hay diferencia, se registra un movimiento de ajuste etiquetado como &quot;ajuste&quot;.
+          Queda a la vista en el historial en vez de corregirse en silencio: así puedes buscar
+          después qué movimiento se te pasó.
+        </Texto>
+        <Boton titulo="Comparar" ancho onPress={conciliar} deshabilitado={!saldoReal} />
+      </Hoja>
 
       <Hoja visible={hoja} onCerrar={() => setHoja(false)} titulo="Nueva cuenta" alto="80%">
         <Campo etiqueta="Nombre" value={nombre} onChangeText={setNombre} placeholder="Cuenta de ahorros, Nequi…" />

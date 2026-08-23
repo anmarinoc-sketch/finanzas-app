@@ -17,26 +17,21 @@ import { esp, radio } from '@/ui/tema';
 
 import { formatoCOP, formatoPct, parsearMonto, separarMiles } from '@/core/dinero';
 import { cuotaFrancesa, diasParaPago, eaAEm, mesesRestantes, nivelEndeudamiento } from '@/core/deudas';
-import { cicloDe } from '@/core/fechas';
 import { COLORES_CATEGORIA } from '@/constantes/paleta';
-import { crearDeuda, crearTarjeta, borrarDeuda, comprasACuotas, cargaCuotasDelMes, saldoTarjeta } from '@/db/crud';
-import { useAjustes } from '@/store/ajustes';
+import { crearDeuda, crearTarjeta, borrarDeuda, comprasACuotas, cargaCuotasDelMes, saldosTarjeta } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
 
 export default function Tarjetas() {
   const t = useTema();
-  const diaInicio = useAjustes((s) => s.diaInicioCiclo);
   const { tarjetas, deudas, ingresoMensual, revision, refrescar } = useDatos();
   const [hoja, setHoja] = useState<'tarjeta' | 'deuda' | null>(null);
 
   useFocusEffect(useCallback(() => { refrescar(); }, [refrescar]));
-
-  const ciclo = cicloDe(new Date(), diaInicio);
   const cuotasMes = useMemo(() => cargaCuotasDelMes(), [revision]);
   const diferidas = useMemo(() => comprasACuotas(), [revision]);
   const cuotaDeudas = deudas.reduce((a, d) => a + d.cuotaMensual, 0);
   const endeudamiento = nivelEndeudamiento(cuotasMes + cuotaDeudas, ingresoMensual);
-  const saldoTotal = tarjetas.reduce((a, c) => a + saldoTarjeta(c.id, ciclo.desde), 0);
+  const saldoTotal = tarjetas.reduce((a, c) => a + saldosTarjeta(c.id).deudaTotal, 0);
   const cupoTotal = tarjetas.reduce((a, c) => a + c.cupoTotal, 0);
 
   return (
@@ -84,8 +79,8 @@ export default function Tarjetas() {
             />
           </Tarjeta>
         ) : tarjetas.map((c) => {
-          const saldo = saldoTarjeta(c.id, ciclo.desde);
-          const uso = c.cupoTotal > 0 ? saldo / c.cupoTotal : 0;
+          const s = saldosTarjeta(c.id);
+          const uso = c.cupoTotal > 0 ? s.deudaTotal / c.cupoTotal : 0;
           const dias = diasParaPago(c.diaPago);
           return (
             <Pressable key={c.id} onPress={() => router.push(`/tarjeta/${c.id}`)} accessibilityRole="button">
@@ -101,12 +96,17 @@ export default function Tarjetas() {
 
                 <View style={{ flexDirection: 'row', alignItems: 'flex-end' }}>
                   <View style={{ flex: 1 }}>
-                    <Texto variante="micro" color="tenue">SALDO ACTUAL</Texto>
-                    <Texto variante="montoGrande" style={{ fontSize: 22 }}>{formatoCOP(saldo)}</Texto>
+                    <Texto variante="micro" color="tenue">DEBES HOY</Texto>
+                    <Texto variante="montoGrande" style={{ fontSize: 22 }} color={s.saldoActual < 0 ? 'verde' : 'texto'}>
+                      {formatoCOP(s.saldoActual)}
+                    </Texto>
+                    {s.futuro > 0 ? (
+                      <Texto variante="micro" color="tenue">+ {formatoCOP(s.futuro)} en cuotas por causar</Texto>
+                    ) : null}
                   </View>
                   <View style={{ alignItems: 'flex-end' }}>
                     <Texto variante="micro" color="tenue">DISPONIBLE</Texto>
-                    <Texto variante="monto" color="verde">{formatoCOP(Math.max(0, c.cupoTotal - saldo))}</Texto>
+                    <Texto variante="monto" color="verde">{formatoCOP(Math.max(0, c.cupoTotal - s.deudaTotal))}</Texto>
                   </View>
                 </View>
 
