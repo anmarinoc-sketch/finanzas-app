@@ -1,9 +1,12 @@
 name: Construir APK
 
-# Se dispara a mano desde la pestaña Actions, o al publicar una etiqueta v1.0.0, v1.1.0…
+# Se dispara solo al subir cambios a main, a mano desde la pestaña Actions,
+# o al publicar una etiqueta v1.0.0, v1.1.0…
 on:
   workflow_dispatch:
   push:
+    branches:
+      - main
     tags:
       - 'v*'
 
