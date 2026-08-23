@@ -19,7 +19,7 @@ import {
   archivarCategoria, cargaCuotasDelMes, comprasACuotas, crearIngreso,
   guardarDistribucion, guardarUsuario, listarBolsillos, listarCategorias,
   listarCategoriasRaiz, listarCuentas, listarDeudas, listarIngresos,
-  listarMetas, listarMovimientos, listarRecurrentes, listarTarjetas,
+  listarMetas, listarMovimientos, listarRecurrentes, listarTarjetas, reemplazarIngresos,
   obtenerUsuario, recurrentesVencidos, saldoConsolidado,
 } from '../src/db/crud';
 import {
@@ -141,5 +141,35 @@ suite('primer render del dashboard, sin ningún movimiento', () => {
     expect(comprasACuotas()).toEqual([]);
     expect(cargaCuotasDelMes()).toBe(0);
     expect(listarMovimientos({ limite: 5 })).toEqual([]);
+  });
+});
+
+suite('reconfigurar sin duplicar ni resucitar', () => {
+  test('reemplazarIngresos sustituye en bloque, no acumula', () => {
+    reemplazarIngresos([
+      { nombre: 'Salario', monto: 4_000_000, frecuencia: 'mensual', activo: 1, fechaInicio: '2026-08-23', cuentaId: null },
+    ] as any);
+    expect(listarIngresos()).toHaveLength(1);
+
+    // Rehacer la configuración con los mismos datos no debe duplicarlos.
+    reemplazarIngresos([
+      { nombre: 'Salario', monto: 4_500_000, frecuencia: 'mensual', activo: 1, fechaInicio: '2026-08-23', cuentaId: null },
+      { nombre: 'Arriendo', monto: 900_000, frecuencia: 'mensual', activo: 1, fechaInicio: '2026-08-23', cuentaId: null },
+    ] as any);
+    const tras = listarIngresos();
+    expect(tras).toHaveLength(2);
+    expect(tras.find((i) => i.nombre === 'Salario')?.monto).toBe(4_500_000);
+  });
+
+  test('archivar y desarchivar categorías es reversible', () => {
+    const todas = () => listarCategorias(true).filter((c) => !c.padreId);
+    const objetivo = todas().find((c) => c.nombre === 'Ropa')!;
+
+    archivarCategoria(objetivo.id, true);
+    expect(listarCategoriasRaiz().some((c) => c.id === objetivo.id)).toBe(false);
+    expect(todas().find((c) => c.id === objetivo.id)?.archivada).toBe(1);
+
+    archivarCategoria(objetivo.id, false);
+    expect(listarCategoriasRaiz().some((c) => c.id === objetivo.id)).toBe(true);
   });
 });

@@ -14,6 +14,8 @@ import { esp, radio, TOQUE_MIN } from '@/ui/tema';
 
 import { formatoCOP } from '@/core/dinero';
 import { useAjustes } from '@/store/ajustes';
+import { useOnboarding } from '@/store/onboarding';
+import { listarBolsillos, listarCategorias, listarIngresos } from '@/db/crud';
 import { useDatos } from '@/store/datos';
 import { cancelarTodas, pedirPermisoNotificaciones, programarResumenSemanal } from '@/servicios/notificaciones';
 
@@ -23,6 +25,28 @@ export default function Ajustes() {
   const t = useTema();
   const a = useAjustes();
   const { ingresoMensual, categorias } = useDatos();
+  const precargar = useOnboarding((s) => s.precargarDesdeBD);
+
+  /**
+   * Reabre el asistente de 4 pasos con los valores actuales ya cargados.
+   * Al terminarlo, los ingresos y la distribución se reemplazan en bloque,
+   * así que reconfigurar no duplica nada.
+   */
+  const reconfigurar = () => {
+    precargar({
+      ingresos: listarIngresos().map((i) => ({ nombre: i.nombre, monto: i.monto, frecuencia: i.frecuencia })),
+      bolsillos: listarBolsillos().map((b) => ({
+        nombre: b.nombre, tipo: b.tipo, porcentaje: b.porcentaje, color: b.color, icono: b.icono,
+      })),
+      categoriasDesactivadas: listarCategorias(true).filter((c) => !c.padreId && c.archivada).map((c) => c.id),
+      diaInicioCiclo: a.diaInicioCiclo,
+      tema: a.tema,
+      biometria: a.biometria,
+      notificaciones: a.notificaciones,
+      nombre: a.nombre,
+    });
+    router.push('/onboarding/ingresos');
+  };
 
   const cambiarNotificaciones = async (v: boolean) => {
     if (v) {
@@ -103,8 +127,25 @@ export default function Ajustes() {
           <Opcion icono="lock-closed-outline" texto="Bloqueo de la app" detalle={a.pinActivo || a.biometria ? 'Activo' : 'Desactivado'} onPress={() => router.push('/ajustes/seguridad')} ultimo />
         </Seccion>
 
+        <Seccion titulo="Configuración inicial">
+          <Opcion
+            icono="refresh-outline"
+            texto="Rehacer la configuración"
+            detalle="Vuelve a los 4 pasos con tus datos actuales"
+            onPress={reconfigurar}
+            ultimo
+          />
+        </Seccion>
+
         <Seccion titulo="Datos">
-          <Opcion icono="download-outline" texto="Exportar e importar" detalle="CSV, PDF y copia de seguridad" onPress={() => router.push('/ajustes/datos')} ultimo />
+          <Opcion icono="download-outline" texto="Exportar e importar" detalle="CSV, PDF y copia de seguridad" onPress={() => router.push('/ajustes/datos')} />
+          <Opcion
+            icono="trash-outline"
+            texto="Borrar movimientos o empezar de cero"
+            detalle="Para hacer pruebas y dejar la app limpia"
+            onPress={() => router.push('/ajustes/datos')}
+            ultimo
+          />
         </Seccion>
 
         <Texto variante="micro" color="tenue" style={{ textAlign: 'center', marginTop: esp.lg, lineHeight: 18 }}>

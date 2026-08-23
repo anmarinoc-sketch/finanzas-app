@@ -44,6 +44,17 @@ export const actualizarIngreso = (id: number, v: Partial<Ingreso>) =>
 export const borrarIngreso = (id: number) =>
   db.delete(ingresos).where(eq(ingresos.id, id)).run();
 
+/**
+ * Sustituye todos los ingresos de golpe. Lo usa el asistente de
+ * configuracion: si solo insertara, rehacerlo duplicaria lo ya guardado.
+ */
+export function reemplazarIngresos(lista: Omit<Ingreso, 'id'>[]) {
+  bdNativa.withTransactionSync(() => {
+    db.delete(ingresos).run();
+    lista.forEach((i) => db.insert(ingresos).values(i).run());
+  });
+}
+
 /* ------------------------------ bolsillos ------------------------------ */
 
 export const listarBolsillos = (): Bolsillo[] =>

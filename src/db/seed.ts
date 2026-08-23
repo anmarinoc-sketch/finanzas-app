@@ -1,5 +1,6 @@
 import { format, startOfMonth, subMonths } from 'date-fns';
 import { bdNativa, db } from './cliente';
+import { BOLSILLOS_BASE } from '@/constantes/bolsillos';
 import { CATEGORIAS_BASE } from '@/constantes/categorias';
 import { COLORES_BOLSILLO } from '@/constantes/paleta';
 import {
@@ -9,18 +10,10 @@ import {
   crearTransaccion, listarCategorias, listarCuentas, listarTarjetas,
   registrarAporte, guardarUsuario, obtenerUsuario,
 } from './crud';
-import type { TipoBolsillo } from './schema';
 
 const iso = (d: Date) => format(d, 'yyyy-MM-dd');
 
-/** Distribucion 50/30/20 ampliada con imprevistos y deudas. */
-export const BOLSILLOS_BASE: { nombre: string; tipo: TipoBolsillo; porcentaje: number; icono: string }[] = [
-  { nombre: 'Necesidades', tipo: 'necesidades', porcentaje: 50, icono: 'home-outline' },
-  { nombre: 'Ocio', tipo: 'ocio', porcentaje: 20, icono: 'game-controller-outline' },
-  { nombre: 'Ahorro', tipo: 'ahorro', porcentaje: 15, icono: 'wallet-outline' },
-  { nombre: 'Imprevistos', tipo: 'imprevistos', porcentaje: 10, icono: 'umbrella-outline' },
-  { nombre: 'Deudas', tipo: 'deudas', porcentaje: 5, icono: 'card-outline' },
-];
+export { BOLSILLOS_BASE } from '@/constantes/bolsillos';
 
 /** Crea bolsillos y categorias por defecto si la base esta vacia. */
 export function sembrarCatalogos() {

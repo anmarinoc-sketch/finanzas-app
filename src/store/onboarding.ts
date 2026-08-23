@@ -1,7 +1,7 @@
 import { create } from 'zustand';
 import type { Frecuencia, TipoBolsillo } from '@/db/schema';
 import { COLORES_BOLSILLO } from '@/constantes/paleta';
-import { BOLSILLOS_BASE } from '@/db/seed';
+import { BOLSILLOS_BASE } from '@/constantes/bolsillos';
 
 export type IngresoBorrador = { nombre: string; monto: number; frecuencia: Frecuencia };
 export type BolsilloBorrador = {
@@ -22,6 +22,9 @@ type EstadoOnboarding = {
   quitarIngreso: (idx: number) => void;
   setBolsillos: (b: BolsilloBorrador[]) => void;
   aplicarPlantilla: (p: '50/30/20' | '60/20/20') => void;
+  precargarDesdeBD: (datos: Omit<EstadoOnboarding,
+    'agregarIngreso' | 'quitarIngreso' | 'setBolsillos' | 'aplicarPlantilla'
+    | 'precargarDesdeBD' | 'alternarCategoria' | 'set' | 'reiniciar'>) => void;
   alternarCategoria: (id: number) => void;
   set: (p: Partial<EstadoOnboarding>) => void;
   reiniciar: () => void;
@@ -49,19 +52,35 @@ export const useOnboarding = create<EstadoOnboarding>((set, get) => ({
   setBolsillos: (b) => set({ bolsillos: b }),
 
   /**
-   * Plantillas rapidas. 50/30/20 mapea necesidades/ocio/ahorro; el resto de
-   * bolsillos se reparte dentro del bloque de ahorro para no romper el 100%.
+   * Plantillas rapidas. Se aplican SOBRE los bolsillos que hay ahora: antes
+   * se reconstruia la lista desde cero, lo que resucitaba los borrados y
+   * eliminaba los personalizados.
    */
   aplicarPlantilla: (p) => {
-    const mapa: Record<string, Record<TipoBolsillo, number>> = {
-      '50/30/20': { necesidades: 50, ocio: 30, ahorro: 12, imprevistos: 5, deudas: 3, personalizado: 0 },
-      '60/20/20': { necesidades: 60, ocio: 20, ahorro: 12, imprevistos: 5, deudas: 3, personalizado: 0 },
+    const mapa: Record<string, Partial<Record<TipoBolsillo, number>>> = {
+      '50/30/20': { necesidades: 50, ocio: 30, ahorro: 12, imprevistos: 5, deudas: 3 },
+      '60/20/20': { necesidades: 60, ocio: 20, ahorro: 12, imprevistos: 5, deudas: 3 },
     };
     const tabla = mapa[p];
-    set({
-      bolsillos: inicial().map((b) => ({ ...b, porcentaje: tabla[b.tipo] ?? 0 })),
-    });
+    const conValores = get().bolsillos.map((b) => ({ ...b, porcentaje: tabla[b.tipo] ?? 0 }));
+
+    // Si el usuario borro alguno de los bolsillos de la plantilla el total no
+    // llega a 100: se reescala lo que queda para que siga cuadrando.
+    const suma = conValores.reduce((a, b) => a + b.porcentaje, 0);
+    let ajustados = conValores;
+    if (suma > 0 && suma !== 100) {
+      ajustados = conValores.map((b) => ({ ...b, porcentaje: Math.round((b.porcentaje * 100) / suma) }));
+      const dif = 100 - ajustados.reduce((a, b) => a + b.porcentaje, 0);
+      if (dif !== 0) {
+        const may = ajustados.reduce((m, b, k, arr) => (b.porcentaje > arr[m].porcentaje ? k : m), 0);
+        ajustados[may] = { ...ajustados[may], porcentaje: ajustados[may].porcentaje + dif };
+      }
+    }
+    set({ bolsillos: ajustados });
   },
+
+  /** Carga en el borrador lo ya guardado, para poder reconfigurar desde Ajustes. */
+  precargarDesdeBD: (datos) => set(datos as any),
 
   alternarCategoria: (id) => {
     const act = get().categoriasDesactivadas;

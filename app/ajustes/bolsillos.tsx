@@ -33,6 +33,9 @@ export default function AjustesBolsillos() {
   useEffect(() => { setLista(bolsillos); }, [bolsillos, revision]);
 
   const suma = lista.reduce((a, b) => a + b.porcentaje, 0);
+  // Comparación por contenido: dice si hay algo pendiente de guardar.
+  const huella = (l: Bolsillo[]) => l.map((b) => `${b.id}:${b.nombre}:${b.porcentaje}`).join('|');
+  const sinGuardar = huella(lista) !== huella(bolsillos);
   const exacto = Math.abs(suma - 100) < 0.01;
 
   const cambiar = (id: number, v: number) =>
@@ -56,9 +59,29 @@ export default function AjustesBolsillos() {
       Alert.alert('No se puede', 'Necesitas al menos un bolsillo.');
       return;
     }
-    Alert.alert(`Eliminar "${nombre}"`, 'Las categorías que estaban en este bolsillo quedarán sin asignar.', [
+    Alert.alert(`Eliminar "${nombre}"`, 'Su porcentaje se reparte entre los demás. Las categorías que estaban en este bolsillo quedarán sin asignar.', [
       { text: 'Cancelar', style: 'cancel' },
-      { text: 'Eliminar', style: 'destructive', onPress: () => setLista((l) => l.filter((x) => x.id !== id)) },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => setLista((l) => {
+          const fuera = l.find((x) => x.id === id);
+          const resto = l.filter((x) => x.id !== id);
+          if (!fuera || !resto.length) return resto;
+          // Sin repartir, el total dejaba de sumar 100 y "Guardar" quedaba
+          // deshabilitado: el borrado parecia deshacerse solo.
+          const sumaResto = resto.reduce((a, x) => a + x.porcentaje, 0);
+          const repartido = sumaResto > 0
+            ? resto.map((x) => ({ ...x, porcentaje: Math.round(x.porcentaje + (fuera.porcentaje * x.porcentaje) / sumaResto) }))
+            : resto.map((x) => ({ ...x, porcentaje: Math.round(100 / resto.length) }));
+          const dif = 100 - repartido.reduce((a, x) => a + x.porcentaje, 0);
+          if (dif !== 0) {
+            const may = repartido.reduce((m, x, k, arr) => (x.porcentaje > arr[m].porcentaje ? k : m), 0);
+            repartido[may] = { ...repartido[may], porcentaje: repartido[may].porcentaje + dif };
+          }
+          return repartido;
+        }),
+      },
     ]);
   };
 
@@ -128,7 +151,23 @@ export default function AjustesBolsillos() {
         </View>
 
         <Boton titulo="Crear bolsillo" icono="add" variante="fantasma" ancho onPress={() => setHoja(true)} />
-        <Boton titulo="Guardar cambios" ancho deshabilitado={!exacto} onPress={guardar} />
+        {sinGuardar ? (
+          <View style={{
+            flexDirection: 'row', alignItems: 'center', gap: esp.sm,
+            backgroundColor: t.ambarFondo, borderRadius: 12, padding: esp.md,
+          }}>
+            <Ionicons name="alert-circle" size={18} color={t.ambar} />
+            <Texto variante="micro" color="ambar" style={{ flex: 1 }}>
+              Tienes cambios sin guardar. Pulsa &quot;Guardar cambios&quot; o se perderán al salir.
+            </Texto>
+          </View>
+        ) : null}
+        <Boton
+          titulo={sinGuardar ? 'Guardar cambios' : 'Guardado'}
+          ancho
+          deshabilitado={!exacto || !sinGuardar}
+          onPress={guardar}
+        />
       </ScrollView>
 
       <Hoja visible={hoja} onCerrar={() => setHoja(false)} titulo="Nuevo bolsillo" alto="45%">

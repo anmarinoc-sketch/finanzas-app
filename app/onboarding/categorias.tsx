@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -14,13 +14,18 @@ import { useTema } from '@/ui/TemaProvider';
 import { esp } from '@/ui/tema';
 import { useOnboarding } from '@/store/onboarding';
 import { useDatos, conRefresco } from '@/store/datos';
-import { crearCategoria } from '@/db/crud';
+import { crearCategoria, listarCategorias } from '@/db/crud';
 import { ICONOS_DISPONIBLES } from '@/constantes/categorias';
 import { COLORES_CATEGORIA } from '@/constantes/paleta';
 
 export default function PasoCategorias() {
   const t = useTema();
-  const categorias = useDatos((s) => s.categoriasRaiz);
+  const revision = useDatos((s) => s.revision);
+  // Incluye las archivadas: al rehacer la configuración deben poder reactivarse.
+  const categorias = useMemo(
+    () => listarCategorias(true).filter((c) => !c.padreId),
+    [revision],
+  );
   const { categoriasDesactivadas, alternarCategoria } = useOnboarding();
   const [hoja, setHoja] = useState(false);
   const [nombre, setNombre] = useState('');

@@ -16,7 +16,7 @@ import { esp } from '@/ui/tema';
 import { useOnboarding } from '@/store/onboarding';
 import { useAjustes } from '@/store/ajustes';
 import { useDatos } from '@/store/datos';
-import { archivarCategoria, crearIngreso, guardarDistribucion } from '@/db/crud';
+import { archivarCategoria, guardarDistribucion, listarCategorias, reemplazarIngresos } from '@/db/crud';
 import { format } from 'date-fns';
 
 const DIAS_CICLO = [1, 5, 10, 15, 20, 25, 30];
@@ -31,19 +31,21 @@ export default function PasoPreferencias() {
   const finalizar = () => {
     setGuardando(true);
     try {
-      // 1. Ingresos
-      ob.ingresos.forEach((i) =>
-        crearIngreso({
-          nombre: i.nombre, monto: i.monto, frecuencia: i.frecuencia,
-          activo: 1, fechaInicio: format(new Date(), 'yyyy-MM-dd'), cuentaId: null,
-        } as any),
-      );
+      // 1. Ingresos. Se reemplazan en bloque para que rehacer la
+      //    configuración desde Ajustes no los duplique.
+      reemplazarIngresos(ob.ingresos.map((i) => ({
+        nombre: i.nombre, monto: i.monto, frecuencia: i.frecuencia,
+        activo: 1, fechaInicio: format(new Date(), 'yyyy-MM-dd'), cuentaId: null,
+      })) as any);
       // 2. Distribucion por bolsillos
       guardarDistribucion(ob.bolsillos.map((b, i) => ({
         nombre: b.nombre, porcentaje: b.porcentaje, color: b.color,
         icono: b.icono, tipo: b.tipo, orden: i,
       })));
-      // 3. Categorias desactivadas -> archivadas (no se borran: conservan historia)
+      // 3. Categorías: se sincroniza en los dos sentidos, para que al rehacer
+      //    la configuración se puedan volver a activar las archivadas.
+      //    Nunca se borran: así conservan su historia de movimientos.
+      listarCategorias(true).filter((c) => !c.padreId).forEach((c) => archivarCategoria(c.id, false));
       ob.categoriasDesactivadas.forEach((id) => archivarCategoria(id, true));
       // 4. Preferencias. El permiso de notificaciones NO se pide aquí a
       //    propósito: este es el camino crítico que deja la app configurada,
