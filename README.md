@@ -143,14 +143,17 @@ cd android && ./gradlew assembleDebug
 
 ---
 
-## 5. Ejecutar las pruebas
+## 5. Verificar los cambios
 
-La lógica financiera (presupuestos, cuotas, metas, ciclos, insights) está en funciones
-puras y tiene pruebas:
+Antes de dar por bueno cualquier cambio:
 
 ```bash
-npm test
+npm run verificar
 ```
+
+Eso revisa los tipos, comprueba que no haya rutas duplicadas de expo-router y corre las
+68 pruebas: lógica financiera, capa de datos contra SQLite real, integridad del dinero y
+dependencias en tiempo de ejecución. Es lo mismo que corre la CI antes de compilar.
 
 ---
 

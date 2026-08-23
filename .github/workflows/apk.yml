@@ -48,6 +48,9 @@ jobs:
       - name: Revisar tipos
         run: npx tsc --noEmit
 
+      - name: Verificar que no haya rutas duplicadas
+        run: npm run rutas
+
       - name: Correr las pruebas
         run: npx jest
 

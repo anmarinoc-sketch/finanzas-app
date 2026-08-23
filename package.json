@@ -9,7 +9,9 @@
     "assets": "node scripts/generar-assets.mjs",
     "test": "jest",
     "db:generate": "drizzle-kit generate",
-    "ios": "expo run:ios"
+    "ios": "expo run:ios",
+    "rutas": "node scripts/verificar-rutas.mjs",
+    "verificar": "tsc --noEmit && node scripts/verificar-rutas.mjs && jest"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",
