@@ -4,7 +4,11 @@
  * pruebas, sin emulador. Reproduce la API síncrona que usan el driver de
  * Drizzle para Expo y el repositorio de la app.
  */
-import { DatabaseSync } from 'node:sqlite';
+// node:sqlite solo existe a partir de Node 22.5. Si falta, las pruebas de
+// integración se saltan en vez de romper el build.
+let DatabaseSync: any = null;
+try { ({ DatabaseSync } = require('node:sqlite')); } catch { /* Node antiguo */ }
+export const HAY_SQLITE = DatabaseSync !== null;
 
 const limpiar = (params: unknown[] = []) =>
   params.map((p) => {
@@ -14,7 +18,7 @@ const limpiar = (params: unknown[] = []) =>
   });
 
 class SentenciaFalsa {
-  constructor(private db: DatabaseSync, private sql: string) {}
+  constructor(private db: any, private sql: string) {}
 
   executeSync(params: unknown[] = []) {
     const stmt = this.db.prepare(this.sql);
@@ -46,7 +50,16 @@ class SentenciaFalsa {
 }
 
 export class BaseFalsa {
-  private db = new DatabaseSync(':memory:');
+  // Se crea de forma perezosa: si node:sqlite no está disponible y todas las
+  // pruebas se saltan, nunca se llega a instanciar.
+  private _db: any = null;
+  private get db() {
+    if (!this._db) {
+      if (!DatabaseSync) throw new Error('node:sqlite no disponible (hace falta Node 22.5 o superior)');
+      this._db = new DatabaseSync(':memory:');
+    }
+    return this._db;
+  }
 
   prepareSync(sql: string) { return new SentenciaFalsa(this.db, sql); }
   execSync(sql: string) { this.db.exec(sql); }

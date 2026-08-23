@@ -3,6 +3,8 @@
  * entrar al dashboard. Ejecuta el repositorio y las consultas reales contra
  * un SQLite de verdad, con el mismo esquema que usa la app en el teléfono.
  */
+import { HAY_SQLITE } from './apoyo/expoSqliteFalso';
+
 // El mock se iza por encima de los imports, así que la instancia se crea
 // dentro del propio factory: si no, la capa de datos se cargaría antes.
 jest.mock('expo-sqlite', () => {
@@ -29,11 +31,13 @@ import { ingresoMensualEstimado } from '../src/core/ingresos';
 import { evaluarPresupuesto } from '../src/core/presupuesto';
 
 beforeAll(() => {
+  if (!HAY_SQLITE) return;
   migrar();
   sembrarCatalogos();
 });
 
-describe('arranque en frío', () => {
+const suite = HAY_SQLITE ? describe : describe.skip;
+suite('arranque en frío', () => {
   test('las migraciones y los catálogos base se crean', () => {
     expect(listarBolsillos().length).toBe(5);
     expect(listarCategoriasRaiz().length).toBe(20);
@@ -42,7 +46,7 @@ describe('arranque en frío', () => {
   });
 });
 
-describe('terminar el onboarding', () => {
+suite('terminar el onboarding', () => {
   test('el flujo completo no lanza y deja el estado consistente', () => {
     // 1. Un solo ingreso, que es el caso mínimo que debe bastar.
     crearIngreso({
@@ -83,7 +87,7 @@ describe('terminar el onboarding', () => {
   });
 });
 
-describe('primer render del dashboard, sin ningún movimiento', () => {
+suite('primer render del dashboard, sin ningún movimiento', () => {
   const diaInicio = 1;
 
   test('todas las consultas del resumen responden sin lanzar', () => {

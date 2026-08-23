@@ -28,7 +28,9 @@ jobs:
       - name: Preparar Node
         uses: actions/setup-node@v4
         with:
-          node-version: 20
+          # Node 24: la prueba de integración usa node:sqlite, que no existe
+          # antes de la 22.5 y solo es estable a partir de la 24.
+          node-version: 24
           cache: npm
 
       - name: Preparar Java 17
