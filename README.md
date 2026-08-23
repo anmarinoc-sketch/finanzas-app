@@ -511,18 +511,38 @@ publicidad. Los datos se guardan en `misfinanzas.db` dentro del almacenamiento p
 de la app. Si desinstalas sin exportar la copia de seguridad, los datos se pierden:
 por eso conviene usar Ajustes › Datos › Copia de seguridad de vez en cuando.
 
+
 ### Sobre los permisos
 
-`app.json` declara solo lo que la app usa: cámara y galería para la foto del recibo,
-notificaciones y `RECEIVE_BOOT_COMPLETED` para reprogramar los avisos tras reiniciar el
-teléfono, biometría para el bloqueo y `VIBRATE` para el feedback háptico. Los permisos
-que arrastran algunas librerías (ubicación, micrófono, almacenamiento externo) se anulan
-explícitamente con `blockedPermissions`, así que no aparecen en el APK final.
+Estos son los 12 permisos que declara el APK final. Están verificados parseando el
+manifest binario del APK ya compilado y descargado de Releases, no la configuración:
 
-El permiso `INTERNET` lo añade el propio React Native en su manifest base y no se puede
-quitar sin romper la compilación en modo desarrollo. La app no hace ninguna llamada de
-red: puedes comprobarlo poniendo el teléfono en modo avión, todo sigue funcionando igual.
+| Permiso | Para qué | Quién lo pide |
+|---|---|---|
+| `CAMERA` | Foto del recibo | La app |
+| `READ_MEDIA_IMAGES` | Elegir el recibo de la galería | La app |
+| `USE_BIOMETRIC` / `USE_FINGERPRINT` | Desbloqueo con huella | La app |
+| `POST_NOTIFICATIONS` | Alertas de presupuesto y recordatorios | La app |
+| `RECEIVE_BOOT_COMPLETED` | Reprogramar los avisos tras reiniciar el teléfono | La app |
+| `VIBRATE` | Feedback háptico al registrar un gasto | La app |
+| `WAKE_LOCK` | Entregar una notificación con la pantalla apagada | expo-notifications |
+| `INTERNET`, `ACCESS_NETWORK_STATE` | Nada. Los declara el manifest base de React Native | React Native |
+| `c2dm.permission.RECEIVE` | Nada. Lo declara la parte de push de expo-notifications | expo-notifications |
+| `DYNAMIC_RECEIVER_NOT_EXPORTED_PERMISSION` | Permiso propio de la app, para que sus receivers no queden expuestos | React Native |
 
+Se anulan con `blockedPermissions` **24 permisos** que arrastraban las librerías y que la
+app no usa: ubicación, micrófono, almacenamiento externo, dibujar sobre otras apps, el
+referrer de instalación de Play y los 16 de contadores en el ícono del launcher
+(Samsung, Huawei, Oppo, HTC, Sony…) que vienen con expo-notifications.
+
+Los tres últimos de la tabla no se pueden quitar sin arriesgar el modo desarrollo o las
+notificaciones locales, así que se dejan declarados y se advierten aquí. **La app no hace
+ninguna llamada de red**: se comprueba poniendo el teléfono en modo avión, todo sigue
+funcionando igual.
+
+En el manifest también aparecen `DUMP` y `BIND_JOB_SERVICE`, pero **no son permisos que
+la app solicite**: son atributos que protegen componentes internos para que otras
+aplicaciones no puedan invocarlos.
 ---
 
 ## 13. APK automático en GitHub
