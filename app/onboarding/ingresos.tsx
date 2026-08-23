@@ -49,6 +49,7 @@ export default function PasoIngresos() {
   return (
     <PasoOnboarding
       paso={1}
+      conVolver={false}
       titulo="¿Cuánto entra al mes?"
       bajada="Registra tus fuentes de ingreso. Con esto la app calcula tus bolsillos, tus presupuestos y cuánto puedes ahorrar."
       pie={

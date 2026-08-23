@@ -44,7 +44,16 @@ export default function PasoCategorias() {
       paso={3}
       titulo="Tus categorías"
       bajada={`Ya cargamos ${categorias.length} categorías típicas. Desactiva las que no uses o crea las tuyas; después puedes cambiarlas cuando quieras.`}
-      pie={<Boton titulo={`Continuar con ${activas} categorías`} ancho onPress={() => router.push('/onboarding/preferencias')} />}
+      pie={
+        <View style={{ flexDirection: 'row', gap: esp.md }}>
+          <Boton titulo="Atrás" variante="secundario" icono="chevron-back" onPress={() => router.back()} />
+          <Boton
+            titulo={`Continuar con ${activas}`}
+            style={{ flex: 1 }}
+            onPress={() => router.push('/onboarding/preferencias')}
+          />
+        </View>
+      }
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: esp.sm, paddingBottom: esp.lg }}>
         <Tarjeta padding={esp.sm} style={{ gap: 2 }}>

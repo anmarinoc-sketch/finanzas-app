@@ -1,8 +1,9 @@
 import { Pressable, View } from 'react-native';
-import { Tabs, router } from 'expo-router';
+import { Redirect, Tabs, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { useTema } from '@/ui/TemaProvider';
+import { useAjustes } from '@/store/ajustes';
 
 /** Boton central (+) del tab bar: abre el registro rapido como modal. */
 function BotonCentral() {
@@ -32,6 +33,16 @@ function BotonCentral() {
 
 export default function LayoutTabs() {
   const t = useTema();
+  const { cargado, onboardingCompleto, pinActivo, biometria, desbloqueado } = useAjustes();
+
+  // Puerta de entrada. Vive aqui y no en un app/index.tsx aparte porque los
+  // grupos entre parentesis no anaden segmento a la URL: un app/index.tsx y
+  // este app/(tabs)/index.tsx resolverian los dos a '/' y la redireccion
+  // entre ambos entraria en bucle infinito.
+  if (!cargado) return null;
+  if (!onboardingCompleto) return <Redirect href="/onboarding/ingresos" />;
+  if ((pinActivo || biometria) && !desbloqueado) return <Redirect href="/bloqueo" />;
+
   return (
     <Tabs
       screenOptions={{

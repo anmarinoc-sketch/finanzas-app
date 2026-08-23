@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -52,6 +52,39 @@ export default function PasoDistribucion() {
     setBolsillos(escalados);
   };
 
+  /**
+   * Elimina un bolsillo, incluidos los que vienen por defecto. El porcentaje
+   * que queda libre se reparte entre los demas para no dejar la suma rota.
+   */
+  const eliminar = (idx: number) => {
+    const b = bolsillos[idx];
+    if (bolsillos.length === 1) {
+      Alert.alert('No se puede', 'Necesitas al menos un bolsillo para repartir tu ingreso.');
+      return;
+    }
+    Alert.alert(`Eliminar "${b.nombre}"`, 'Su porcentaje se repartirá entre los demás bolsillos.', [
+      { text: 'Cancelar', style: 'cancel' },
+      {
+        text: 'Eliminar',
+        style: 'destructive',
+        onPress: () => {
+          const resto = bolsillos.filter((_, i) => i !== idx);
+          const sumaResto = resto.reduce((a, x) => a + x.porcentaje, 0);
+          const repartidos = sumaResto > 0
+            ? resto.map((x) => ({ ...x, porcentaje: Math.round(x.porcentaje + (b.porcentaje * x.porcentaje) / sumaResto) }))
+            : resto.map((x) => ({ ...x, porcentaje: Math.round(100 / resto.length) }));
+          // Cuadra el redondeo en el bolsillo mas grande.
+          const dif = Math.round(bolsillos.reduce((a, x) => a + x.porcentaje, 0)) - repartidos.reduce((a, x) => a + x.porcentaje, 0);
+          if (dif !== 0 && repartidos.length) {
+            const may = repartidos.reduce((m, x, k, arr) => (x.porcentaje > arr[m].porcentaje ? k : m), 0);
+            repartidos[may] = { ...repartidos[may], porcentaje: repartidos[may].porcentaje + dif };
+          }
+          setBolsillos(repartidos);
+        },
+      },
+    ]);
+  };
+
   const agregarBolsillo = () => {
     if (!nuevoNombre.trim()) return;
     setBolsillos([...bolsillos, {
@@ -80,7 +113,15 @@ export default function PasoDistribucion() {
               </Pressable>
             </View>
           ) : null}
-          <Boton titulo="Continuar" ancho deshabilitado={!exacto} onPress={() => router.push('/onboarding/categorias')} />
+          <View style={{ flexDirection: 'row', gap: esp.md }}>
+            <Boton titulo="Atrás" variante="secundario" icono="chevron-back" onPress={() => router.back()} />
+            <Boton
+              titulo="Continuar"
+              style={{ flex: 1 }}
+              deshabilitado={!exacto}
+              onPress={() => router.push('/onboarding/categorias')}
+            />
+          </View>
         </>
       }
     >
@@ -110,6 +151,15 @@ export default function PasoDistribucion() {
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: b.color }} />
               <Texto variante="cuerpo" style={{ flex: 1 }}>{b.nombre}</Texto>
               <Texto variante="monto" style={{ fontSize: 15 }}>{Math.round(b.porcentaje)}%</Texto>
+              <Pressable
+                onPress={() => eliminar(idx)}
+                hitSlop={10}
+                accessibilityRole="button"
+                accessibilityLabel={`Eliminar el bolsillo ${b.nombre}`}
+                style={{ padding: 4 }}
+              >
+                <Ionicons name="trash-outline" size={18} color={t.textoTenue} />
+              </Pressable>
             </View>
             <Deslizador
               valor={b.porcentaje}

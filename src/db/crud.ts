@@ -72,6 +72,13 @@ export function guardarDistribucion(lista: (Omit<Bolsillo, 'id'> & { id?: number
       if (id) valores.id = id;
       db.insert(bolsillos).values(valores).run();
     });
+    // Si se elimino un bolsillo, las categorias que apuntaban a el quedarian
+    // con un id colgado: se dejan sin asignar en vez de romper los agregados.
+    bdNativa.runSync(
+      `UPDATE categorias SET bolsillo_id = NULL
+        WHERE bolsillo_id IS NOT NULL
+          AND bolsillo_id NOT IN (SELECT id FROM bolsillos)`,
+    );
   });
 }
 

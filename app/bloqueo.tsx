@@ -23,7 +23,7 @@ export default function Bloqueo() {
 
   const entrar = useCallback(() => {
     setDesbloqueado(true);
-    router.replace('/(tabs)');
+    router.replace('/');
   }, [setDesbloqueado]);
 
   const pedirBiometria = useCallback(async () => {

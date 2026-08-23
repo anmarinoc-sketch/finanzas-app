@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Pressable, ScrollView, View } from 'react-native';
+import { Alert, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import * as LocalAuthentication from 'expo-local-authentication';
 
@@ -61,7 +61,7 @@ export default function PasoPreferencias() {
       });
       refrescar();
       ob.reiniciar();
-      router.replace('/(tabs)');
+      router.replace('/');
     } catch (e: any) {
       Alert.alert('No se pudo guardar', e?.message ?? 'Intenta de nuevo.');
     } finally {
@@ -85,7 +85,12 @@ export default function PasoPreferencias() {
       paso={4}
       titulo="Últimos detalles"
       bajada="Ajusta cómo quieres que la app cuente tus ciclos y cómo se ve. Todo esto lo puedes cambiar luego."
-      pie={<Boton titulo="Empezar a usar Mis Finanzas" ancho cargando={guardando} onPress={finalizar} />}
+      pie={
+        <View style={{ flexDirection: 'row', gap: esp.md }}>
+          <Boton titulo="Atrás" variante="secundario" icono="chevron-back" onPress={() => router.back()} deshabilitado={guardando} />
+          <Boton titulo="Empezar a usar" style={{ flex: 1 }} cargando={guardando} onPress={finalizar} />
+        </View>
+      }
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: esp.md, paddingBottom: esp.lg }}>
         <Tarjeta style={{ gap: esp.md }}>
@@ -139,11 +144,6 @@ export default function PasoPreferencias() {
           </View>
         </Tarjeta>
 
-        <Pressable onPress={() => router.back()} accessibilityRole="button">
-          <Texto variante="etiqueta" color="tenue" style={{ textAlign: 'center', paddingVertical: 6 }}>
-            Volver al paso anterior
-          </Texto>
-        </Pressable>
       </ScrollView>
     </PasoOnboarding>
   );

@@ -15,6 +15,9 @@ import { ProveedorTema, useTema } from '@/ui/TemaProvider';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
+// Muestra una pantalla de error legible en vez de cerrarse en silencio si algo falla.
+export { ErrorBoundary } from 'expo-router';
+
 export default function LayoutRaiz() {
   const [listo, setListo] = useState(false);
   const cargar = useAjustes((s) => s.cargar);
@@ -56,7 +59,6 @@ function Contenido() {
           animation: 'slide_from_right',
         }}
       >
-        <Stack.Screen name="index" />
         <Stack.Screen name="(tabs)" />
         <Stack.Screen name="bloqueo" options={{ animation: 'fade', gestureEnabled: false }} />
         <Stack.Screen name="registro" options={{ presentation: 'modal', animation: 'slide_from_bottom' }} />

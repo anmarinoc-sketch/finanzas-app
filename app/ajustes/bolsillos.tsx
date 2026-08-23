@@ -50,6 +50,18 @@ export default function AjustesBolsillos() {
     setLista(escalados);
   };
 
+  /** Se puede quitar cualquier bolsillo, tambien los que vienen por defecto. */
+  const eliminar = (id: number, nombre: string) => {
+    if (lista.length === 1) {
+      Alert.alert('No se puede', 'Necesitas al menos un bolsillo.');
+      return;
+    }
+    Alert.alert(`Eliminar "${nombre}"`, 'Las categorías que estaban en este bolsillo quedarán sin asignar.', [
+      { text: 'Cancelar', style: 'cancel' },
+      { text: 'Eliminar', style: 'destructive', onPress: () => setLista((l) => l.filter((x) => x.id !== id)) },
+    ]);
+  };
+
   const guardar = () => {
     if (!exacto) return Alert.alert('No suma 100%', 'Ajusta los porcentajes hasta que sumen exactamente 100%.');
     conRefresco(() => guardarDistribucion(lista.map((b, i) => ({
@@ -96,14 +108,12 @@ export default function AjustesBolsillos() {
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: b.color }} />
               <Texto variante="cuerpo" style={{ flex: 1 }}>{b.nombre}</Texto>
               <Texto variante="monto" style={{ fontSize: 15 }}>{Math.round(b.porcentaje)}%</Texto>
-              {b.tipo === 'personalizado' ? (
-                <Pressable
-                  onPress={() => setLista((l) => l.filter((x) => x.id !== b.id))}
-                  hitSlop={8} accessibilityRole="button" accessibilityLabel={`Quitar ${b.nombre}`}
-                >
-                  <Ionicons name="close" size={18} color={t.textoTenue} />
-                </Pressable>
-              ) : null}
+              <Pressable
+                onPress={() => eliminar(b.id, b.nombre)}
+                hitSlop={8} accessibilityRole="button" accessibilityLabel={`Eliminar el bolsillo ${b.nombre}`}
+              >
+                <Ionicons name="trash-outline" size={18} color={t.textoTenue} />
+              </Pressable>
             </View>
             <Deslizador valor={b.porcentaje} color={b.color} max={100} onChange={(v) => cambiar(b.id, v)} />
             <Texto variante="micro" color="tenue">
