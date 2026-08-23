@@ -522,3 +522,25 @@ explícitamente con `blockedPermissions`, así que no aparecen en el APK final.
 El permiso `INTERNET` lo añade el propio React Native en su manifest base y no se puede
 quitar sin romper la compilación en modo desarrollo. La app no hace ninguna llamada de
 red: puedes comprobarlo poniendo el teléfono en modo avión, todo sigue funcionando igual.
+
+---
+
+## 13. APK automático en GitHub
+
+Cada push a `main` dispara [`.github/workflows/apk.yml`](.github/workflows/apk.yml), que
+revisa tipos, corre las pruebas, genera el proyecto nativo, compila con Gradle y publica
+el APK en la pestaña **Releases**. No hace falta cuenta de Expo ni ningún secreto.
+
+- Push a `main` → actualiza la prerelease `ultimo` (siempre la última compilación).
+- `git tag v1.1.0 && git push --tags` → crea una Release numerada propia.
+
+El APK se compila **solo para ABIs ARM** (`arm64-v8a` y `armeabi-v7a`), que cubren
+cualquier teléfono Android real. Incluir `x86`/`x86_64` añadía unos 40 MB que solo sirven
+para emuladores. Si necesitas correrlo en un emulador Intel, quita el flag
+`-PreactNativeArchitectures` del workflow.
+
+**Sobre la firma**: Expo firma el build de `release` con un keystore de plantilla fijo e
+idéntico en todas las compilaciones, así que las actualizaciones se instalan encima de la
+versión anterior sin desinstalar. Sirve para instalar el APK a mano, pero **no para subir
+la app a Google Play**: para eso hay que generar un keystore propio, guardarlo como
+secreto del repositorio (`base64 -w0 mi.keystore`) y referenciarlo desde `build.gradle`.
