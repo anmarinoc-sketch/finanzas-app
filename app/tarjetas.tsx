@@ -35,7 +35,7 @@ export default function Tarjetas() {
   const cupoTotal = tarjetas.reduce((a, c) => a + c.cupoTotal, 0);
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado titulo="Tarjetas y deudas" subtitulo="Cupo, cuotas y nivel de endeudamiento" />
       <ScrollView contentContainerStyle={{ padding: esp.lg, gap: esp.md, paddingBottom: esp.xxl }}>
 

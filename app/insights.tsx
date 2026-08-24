@@ -78,7 +78,7 @@ export default function Insights() {
     tono === 'bueno' ? t.verdeFondo : tono === 'malo' ? t.rojoFondo : tono === 'alerta' ? t.ambarFondo : t.acentoFondo;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado titulo="Insights" subtitulo={`Lo que dicen tus números · ${r.etiqueta}`} />
       <ScrollView contentContainerStyle={{ padding: esp.lg, gap: esp.md, paddingBottom: esp.xxl }}>
         {cierre ? (

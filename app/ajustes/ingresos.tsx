@@ -54,7 +54,7 @@ export default function AjustesIngresos() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado titulo="Ingresos" subtitulo="Base de todos tus cálculos" accion="Nuevo" iconoAccion="add" onAccion={() => setHoja(true)} />
       <ScrollView contentContainerStyle={{ padding: esp.lg, gap: esp.md, paddingBottom: esp.xxl }}>
         <Tarjeta style={{ gap: 4 }}>

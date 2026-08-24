@@ -2,6 +2,7 @@ import { Pressable, View } from 'react-native';
 import { Redirect, Tabs, router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTema } from '@/ui/TemaProvider';
 import { useAjustes } from '@/store/ajustes';
 
@@ -34,6 +35,10 @@ function BotonCentral() {
 export default function LayoutTabs() {
   const t = useTema();
   const { cargado, onboardingCompleto, pinActivo, biometria, desbloqueado } = useAjustes();
+  // La app dibuja bajo las barras del sistema (edgeToEdgeEnabled). Sin sumar
+  // el área segura, la barra de navegación de Android -de gestos o de tres
+  // botones- se come las etiquetas de las pestañas.
+  const insets = useSafeAreaInsets();
 
   // Puerta de entrada. Vive aqui y no en un app/index.tsx aparte porque los
   // grupos entre parentesis no anaden segmento a la URL: un app/index.tsx y
@@ -53,8 +58,8 @@ export default function LayoutTabs() {
           backgroundColor: t.fondoElevado,
           borderTopColor: t.borde,
           borderTopWidth: 1,
-          height: 64,
-          paddingBottom: 8,
+          height: 64 + insets.bottom,
+          paddingBottom: 8 + insets.bottom,
           paddingTop: 6,
         },
         tabBarLabelStyle: { fontSize: 11, fontWeight: '600' },

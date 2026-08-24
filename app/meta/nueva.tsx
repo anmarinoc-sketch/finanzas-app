@@ -68,7 +68,7 @@ export default function NuevaMeta() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado titulo="Nueva meta" />
       <ScrollView contentContainerStyle={{ padding: esp.lg, gap: esp.md, paddingBottom: esp.xxl }} keyboardShouldPersistTaps="handled">
         <Campo etiqueta="Nombre de la meta" value={nombre} onChangeText={setNombre} placeholder="Fondo de emergencia, viaje, moto…" />

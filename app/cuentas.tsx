@@ -97,7 +97,7 @@ export default function Cuentas() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado titulo="Cuentas y bolsillos" subtitulo="Saldo consolidado de tu plata" />
       <ScrollView contentContainerStyle={{ padding: esp.lg, gap: esp.md, paddingBottom: esp.xxl }}>
         <Tarjeta style={{ gap: 4 }}>

@@ -148,7 +148,12 @@ vigente, ignorando compras sin pagar de meses anteriores y pagos previos al cort
 Además recortaba con `Math.max(0, …)`, escondiendo el saldo a favor. `saldosTarjeta`
 usa todo el histórico y separa *lo que debes hoy* de *la deuda con cuotas por causar*.
 
-**7. Acciones escondidas.** Eliminar una categoría exigía archivar → desplegar archivadas
+**7. Barras del sistema encima de la app.** Con `edgeToEdgeEnabled` la app dibuja bajo
+la barra de navegación de Android. La barra de pestañas tenía altura fija y las pantallas
+de pila protegían solo el borde superior, así que en un Samsung con tres botones el
+sistema tapaba las etiquetas. Lo cubre `npm run areas`.
+
+**8. Acciones escondidas.** Eliminar una categoría exigía archivar → desplegar archivadas
 → borrar. Y en el paso 1 había que pulsar "Agregar" antes de "Continuar". Si una acción
 razonable necesita dos pasos no obvios, para el usuario simplemente no existe.
 

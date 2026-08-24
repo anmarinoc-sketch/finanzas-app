@@ -106,7 +106,7 @@ export default function AjustesBolsillos() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado titulo="Bolsillos" subtitulo="Cómo repartes tu ingreso" />
       <ScrollView contentContainerStyle={{ padding: esp.lg, gap: esp.md, paddingBottom: esp.xxl }}>
         <Tarjeta style={{ gap: esp.md }}>

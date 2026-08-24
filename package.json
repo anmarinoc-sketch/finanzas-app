@@ -11,7 +11,8 @@
     "db:generate": "drizzle-kit generate",
     "ios": "expo run:ios",
     "rutas": "node scripts/verificar-rutas.mjs",
-    "verificar": "tsc --noEmit && node scripts/verificar-rutas.mjs && jest"
+    "verificar": "tsc --noEmit && node scripts/verificar-rutas.mjs && node scripts/verificar-areas-seguras.mjs && jest",
+    "areas": "node scripts/verificar-areas-seguras.mjs"
   },
   "dependencies": {
     "@expo/vector-icons": "^15.0.2",

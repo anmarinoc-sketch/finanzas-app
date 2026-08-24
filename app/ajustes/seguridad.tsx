@@ -65,7 +65,7 @@ export default function Seguridad() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado titulo="Seguridad" subtitulo="Protege el acceso a tus finanzas" />
       <View style={{ padding: esp.lg, gap: esp.md }}>
         <Tarjeta style={{ gap: esp.lg }}>

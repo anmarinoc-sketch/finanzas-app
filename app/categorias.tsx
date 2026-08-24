@@ -72,7 +72,7 @@ Si prefieres conservarlos agrupados, archívala en vez de borrarla.`
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado
         titulo="Categorías"
         subtitulo={`${categoriasRaiz.length} activas`}

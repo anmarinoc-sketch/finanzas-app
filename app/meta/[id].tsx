@@ -59,7 +59,7 @@ export default function DetalleMeta() {
 
   if (!meta || !calc) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
         <Encabezado titulo="Meta" />
         <EstadoVacio titulo="Meta no encontrada" mensaje="Es posible que la hayas eliminado." />
       </SafeAreaView>
@@ -84,7 +84,7 @@ export default function DetalleMeta() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado titulo={meta.nombre} accion="Eliminar" iconoAccion="trash-outline" onAccion={eliminar} />
       <ScrollView contentContainerStyle={{ padding: esp.lg, gap: esp.md, paddingBottom: esp.xxl }}>
         <Tarjeta style={{ gap: esp.lg, alignItems: 'center' }}>

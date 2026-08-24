@@ -51,6 +51,9 @@ jobs:
       - name: Verificar que no haya rutas duplicadas
         run: npm run rutas
 
+      - name: Verificar las áreas seguras de las pantallas
+        run: npm run areas
+
       - name: Correr las pruebas
         run: npx jest
 

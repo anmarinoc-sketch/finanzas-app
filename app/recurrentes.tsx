@@ -49,7 +49,7 @@ export default function Recurrentes() {
   });
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado titulo="Gastos recurrentes" subtitulo="Cargos fijos y suscripciones" />
       <ScrollView contentContainerStyle={{ padding: esp.lg, gap: esp.md, paddingBottom: esp.xxl }}>
         <View style={{ flexDirection: 'row', gap: esp.md }}>

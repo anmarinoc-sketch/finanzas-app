@@ -73,7 +73,7 @@ export default function Presupuestos() {
   const excede = ingresoMensual > 0 && total > ingresoMensual;
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado titulo="Presupuestos" subtitulo="Tope mensual por categoría" />
       <ScrollView contentContainerStyle={{ padding: esp.lg, gap: esp.md, paddingBottom: esp.xxl }} keyboardShouldPersistTaps="handled">
         <Tarjeta style={{ gap: esp.sm }}>

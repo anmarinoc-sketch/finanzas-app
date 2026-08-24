@@ -44,7 +44,7 @@ export default function DetalleTarjeta() {
 
   if (!tarjeta) {
     return (
-      <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+      <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
         <Encabezado titulo="Tarjeta" />
         <EstadoVacio titulo="Tarjeta no encontrada" mensaje="Puede que la hayas eliminado." />
       </SafeAreaView>
@@ -63,7 +63,7 @@ export default function DetalleTarjeta() {
   };
 
   return (
-    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top']}>
+    <SafeAreaView style={{ flex: 1, backgroundColor: t.fondo }} edges={['top', 'bottom']}>
       <Encabezado
         titulo={tarjeta.nombre}
         subtitulo={tarjeta.banco ?? undefined}
