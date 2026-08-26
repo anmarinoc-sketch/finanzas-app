@@ -3,8 +3,14 @@ import type { Frecuencia, TipoBolsillo } from '@/db/schema';
 import { COLORES_BOLSILLO } from '@/constantes/paleta';
 import { BOLSILLOS_BASE } from '@/constantes/bolsillos';
 
-export type IngresoBorrador = { nombre: string; monto: number; frecuencia: Frecuencia };
+export type IngresoBorrador = {
+  nombre: string; monto: number; frecuencia: Frecuencia;
+  /** Segunda quincena, cuando las dos no son iguales. */
+  montoSecundario?: number | null;
+};
 export type BolsilloBorrador = {
+  /** Id en la base cuando el bolsillo ya existe; ausente si se acaba de crear. */
+  id?: number;
   nombre: string; tipo: TipoBolsillo; porcentaje: number; color: string; icono: string;
 };
 

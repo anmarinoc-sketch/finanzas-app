@@ -34,9 +34,13 @@ export default function Ajustes() {
    */
   const reconfigurar = () => {
     precargar({
-      ingresos: listarIngresos().map((i) => ({ nombre: i.nombre, monto: i.monto, frecuencia: i.frecuencia })),
+      ingresos: listarIngresos().map((i) => ({
+        nombre: i.nombre, monto: i.monto, frecuencia: i.frecuencia,
+        montoSecundario: i.montoSecundario,
+      })),
       bolsillos: listarBolsillos().map((b) => ({
-        nombre: b.nombre, tipo: b.tipo, porcentaje: b.porcentaje, color: b.color, icono: b.icono,
+        id: b.id, nombre: b.nombre, tipo: b.tipo,
+        porcentaje: b.porcentaje, color: b.color, icono: b.icono,
       })),
       categoriasDesactivadas: listarCategorias(true).filter((c) => !c.padreId && c.archivada).map((c) => c.id),
       diaInicioCiclo: a.diaInicioCiclo,

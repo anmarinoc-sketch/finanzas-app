@@ -175,6 +175,11 @@ const MIGRACIONES: string[] = [
     valor TEXT
   );
   `,
+  // v3: segunda quincena. Un sueldo quincenal no siempre paga lo mismo las
+  // dos veces, y suponerlo distorsionaba el ingreso mensual estimado.
+  `
+  ALTER TABLE ingresos ADD COLUMN monto_secundario INTEGER;
+  `,
 ];
 
 /** Aplica las migraciones pendientes. Devuelve la version final. */

@@ -12,13 +12,13 @@ import { Boton } from '@/ui/comp/Boton';
 import { Campo } from '@/ui/comp/Campo';
 import { Chip } from '@/ui/comp/Chip';
 import { Hoja } from '@/ui/comp/Hoja';
-import { Deslizador } from '@/ui/comp/Deslizador';
+import { PasoPorcentaje } from '@/ui/comp/PasoPorcentaje';
 import { BarraSegmentada } from '@/ui/comp/BarraProgreso';
 import { esp } from '@/ui/tema';
 
 import { formatoCOP } from '@/core/dinero';
 import { COLORES_BOLSILLO } from '@/constantes/paleta';
-import { guardarDistribucion } from '@/db/crud';
+import { borrarBolsillo, guardarDistribucion } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
 import type { Bolsillo } from '@/db/schema';
 
@@ -54,35 +54,52 @@ export default function AjustesBolsillos() {
   };
 
   /** Se puede quitar cualquier bolsillo, tambien los que vienen por defecto. */
+  /**
+   * Borra un bolsillo y reparte su porcentaje, todo en la misma escritura.
+   *
+   * Tiene que ser atomico: el useEffect de arriba resincroniza la lista con
+   * la base cada vez que cambia la revision, asi que si solo se borrara y el
+   * reparto se dejara en estado local, la resincronizacion lo descartaria.
+   */
   const eliminar = (id: number, nombre: string) => {
     if (lista.length === 1) {
       Alert.alert('No se puede', 'Necesitas al menos un bolsillo.');
       return;
     }
-    Alert.alert(`Eliminar "${nombre}"`, 'Su porcentaje se reparte entre los demás. Las categorías que estaban en este bolsillo quedarán sin asignar.', [
-      { text: 'Cancelar', style: 'cancel' },
-      {
-        text: 'Eliminar',
-        style: 'destructive',
-        onPress: () => setLista((l) => {
-          const fuera = l.find((x) => x.id === id);
-          const resto = l.filter((x) => x.id !== id);
-          if (!fuera || !resto.length) return resto;
-          // Sin repartir, el total dejaba de sumar 100 y "Guardar" quedaba
-          // deshabilitado: el borrado parecia deshacerse solo.
-          const sumaResto = resto.reduce((a, x) => a + x.porcentaje, 0);
-          const repartido = sumaResto > 0
-            ? resto.map((x) => ({ ...x, porcentaje: Math.round(x.porcentaje + (fuera.porcentaje * x.porcentaje) / sumaResto) }))
-            : resto.map((x) => ({ ...x, porcentaje: Math.round(100 / resto.length) }));
-          const dif = 100 - repartido.reduce((a, x) => a + x.porcentaje, 0);
-          if (dif !== 0) {
-            const may = repartido.reduce((m, x, k, arr) => (x.porcentaje > arr[m].porcentaje ? k : m), 0);
-            repartido[may] = { ...repartido[may], porcentaje: repartido[may].porcentaje + dif };
-          }
-          return repartido;
-        }),
-      },
-    ]);
+    Alert.alert(
+      `Eliminar "${nombre}"`,
+      'Su porcentaje se reparte entre los demás. Las categorías que estaban en este bolsillo quedarán sin asignar.',
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Eliminar',
+          style: 'destructive',
+          onPress: () => {
+            const fuera = lista.find((x) => x.id === id);
+            const resto = lista.filter((x) => x.id !== id);
+            if (!fuera || !resto.length) return;
+
+            const sumaResto = resto.reduce((a, x) => a + x.porcentaje, 0);
+            const repartido = sumaResto > 0
+              ? resto.map((x) => ({ ...x, porcentaje: Math.round(x.porcentaje + (fuera.porcentaje * x.porcentaje) / sumaResto) }))
+              : resto.map((x) => ({ ...x, porcentaje: Math.round(100 / resto.length) }));
+            const dif = 100 - repartido.reduce((a, x) => a + x.porcentaje, 0);
+            if (dif !== 0) {
+              const may = repartido.reduce((m, x, k, arr) => (x.porcentaje > arr[m].porcentaje ? k : m), 0);
+              repartido[may] = { ...repartido[may], porcentaje: repartido[may].porcentaje + dif };
+            }
+
+            conRefresco(() => {
+              borrarBolsillo(id);
+              guardarDistribucion(repartido.map((b, i) => ({
+                id: b.id, nombre: b.nombre, porcentaje: b.porcentaje,
+                color: b.color, icono: b.icono, tipo: b.tipo, orden: i,
+              })));
+            });
+          },
+        },
+      ],
+    );
   };
 
   const guardar = () => {
@@ -130,7 +147,6 @@ export default function AjustesBolsillos() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: esp.sm }}>
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: b.color }} />
               <Texto variante="cuerpo" style={{ flex: 1 }}>{b.nombre}</Texto>
-              <Texto variante="monto" style={{ fontSize: 15 }}>{Math.round(b.porcentaje)}%</Texto>
               <Pressable
                 onPress={() => eliminar(b.id, b.nombre)}
                 hitSlop={8} accessibilityRole="button" accessibilityLabel={`Eliminar el bolsillo ${b.nombre}`}
@@ -138,7 +154,7 @@ export default function AjustesBolsillos() {
                 <Ionicons name="trash-outline" size={18} color={t.textoTenue} />
               </Pressable>
             </View>
-            <Deslizador valor={b.porcentaje} color={b.color} max={100} onChange={(v) => cambiar(b.id, v)} />
+            <PasoPorcentaje valor={b.porcentaje} color={b.color} onChange={(v) => cambiar(b.id, v)} />
             <Texto variante="micro" color="tenue">
               {formatoCOP(Math.round(ingresoMensual * b.porcentaje / 100))} al mes
             </Texto>

@@ -6,7 +6,7 @@
 import { addMonths, subMonths } from 'date-fns';
 import { formatoCOP, formatoCorto, parsearMonto, separarMiles } from '../src/core/dinero';
 import { anclarDia, cicloDe, progresoCiclo, ultimosCiclos } from '../src/core/fechas';
-import { aMensual, ingresoMensualEstimado } from '../src/core/ingresos';
+import { aMensual, ingresoMensualEstimado, mensualDeIngreso } from '../src/core/ingresos';
 import { evaluarPresupuesto, fraseRitmo, nivelPorConsumo } from '../src/core/presupuesto';
 import { cuotaMensual, estadoCuotas, repartirCuotas } from '../src/core/cuotas';
 import { amortizar, cuotaFrancesa, diasParaPago, eaAEm, mesesRestantes, nivelEndeudamiento } from '../src/core/deudas';
@@ -311,5 +311,42 @@ describe('insights', () => {
       suscripcionesAnual: 0, cuotasMensuales: 0,
     };
     expect(generarInsights(vacio)).toHaveLength(0);
+  });
+});
+
+describe('quincenas que no son iguales', () => {
+  test('sin segunda quincena se asumen dos pagos iguales', () => {
+    expect(mensualDeIngreso({ monto: 2_000_000, frecuencia: 'quincenal' })).toBe(4_000_000);
+  });
+
+  test('con segunda quincena se suman las dos, no se duplica la primera', () => {
+    // Caso real: primera quincena fija, segunda con prima o comisiones.
+    expect(mensualDeIngreso({
+      monto: 1_800_000, frecuencia: 'quincenal', montoSecundario: 2_400_000,
+    })).toBe(4_200_000);
+  });
+
+  test('la segunda quincena se ignora en frecuencias que no son quincenales', () => {
+    expect(mensualDeIngreso({
+      monto: 3_000_000, frecuencia: 'mensual', montoSecundario: 999_999,
+    })).toBe(3_000_000);
+  });
+
+  test('una segunda quincena vacía o cero no rompe el cálculo', () => {
+    expect(mensualDeIngreso({ monto: 2_000_000, frecuencia: 'quincenal', montoSecundario: null })).toBe(4_000_000);
+    expect(mensualDeIngreso({ monto: 2_000_000, frecuencia: 'quincenal', montoSecundario: 0 })).toBe(4_000_000);
+  });
+
+  test('un ingreso inactivo no aporta, venga como false o como 0', () => {
+    expect(mensualDeIngreso({ monto: 5_000_000, frecuencia: 'mensual', activo: false })).toBe(0);
+    expect(mensualDeIngreso({ monto: 5_000_000, frecuencia: 'mensual', activo: 0 })).toBe(0);
+  });
+
+  test('el total mezcla quincenas iguales y distintas correctamente', () => {
+    expect(ingresoMensualEstimado([
+      { monto: 1_800_000, frecuencia: 'quincenal', montoSecundario: 2_400_000 },
+      { monto: 900_000, frecuencia: 'mensual' },
+      { monto: 500_000, frecuencia: 'ocasional' },
+    ])).toBe(5_100_000);
   });
 });

@@ -57,7 +57,10 @@ export const useDatos = create<EstadoDatos>((set, get) => ({
       deudas: listarDeudas(),
       ingresos,
       ingresoMensual: ingresoMensualEstimado(
-        ingresos.map((i) => ({ monto: i.monto, frecuencia: i.frecuencia, activo: !!i.activo })),
+        ingresos.map((i) => ({
+          monto: i.monto, frecuencia: i.frecuencia,
+          activo: !!i.activo, montoSecundario: i.montoSecundario,
+        })),
       ),
     });
   },

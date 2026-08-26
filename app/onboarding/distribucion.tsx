@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
@@ -9,7 +9,7 @@ import { Texto } from '@/ui/comp/Texto';
 import { Boton } from '@/ui/comp/Boton';
 import { Campo } from '@/ui/comp/Campo';
 import { Chip } from '@/ui/comp/Chip';
-import { Deslizador } from '@/ui/comp/Deslizador';
+import { PasoPorcentaje } from '@/ui/comp/PasoPorcentaje';
 import { BarraSegmentada } from '@/ui/comp/BarraProgreso';
 import { Hoja } from '@/ui/comp/Hoja';
 import { useTema } from '@/ui/TemaProvider';
@@ -18,11 +18,27 @@ import { formatoCOP } from '@/core/dinero';
 import { ingresoMensualEstimado } from '@/core/ingresos';
 import { COLORES_BOLSILLO } from '@/constantes/paleta';
 import { useOnboarding } from '@/store/onboarding';
+import { conRefresco } from '@/store/datos';
+import { borrarBolsillo, listarBolsillos } from '@/db/crud';
 
 export default function PasoDistribucion() {
   const t = useTema();
   const { ingresos, bolsillos, setBolsillos, aplicarPlantilla } = useOnboarding();
   const [hoja, setHoja] = useState(false);
+
+  // El paso arranca desde lo que hay en la base, con los ids reales. Antes
+  // partía de una lista fija en memoria, y por eso un bolsillo borrado
+  // reaparecía en cuanto el borrador se reiniciaba.
+  useEffect(() => {
+    const guardados = listarBolsillos();
+    if (!guardados.length) return;
+    setBolsillos(guardados.map((b) => ({
+      id: b.id, nombre: b.nombre, porcentaje: b.porcentaje,
+      color: b.color, icono: b.icono, tipo: b.tipo,
+    })));
+    // Solo al entrar: después manda lo que el usuario esté editando.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   const [nuevoNombre, setNuevoNombre] = useState('');
 
   const ingresoMensual = useMemo(
@@ -68,6 +84,9 @@ export default function PasoDistribucion() {
         text: 'Eliminar',
         style: 'destructive',
         onPress: () => {
+          // Se borra en la base en el acto: así el borrado es definitivo
+          // aunque la app se cierre antes de terminar el asistente.
+          if (b.id) conRefresco(() => borrarBolsillo(b.id!));
           const resto = bolsillos.filter((_, i) => i !== idx);
           const sumaResto = resto.reduce((a, x) => a + x.porcentaje, 0);
           const repartidos = sumaResto > 0
@@ -150,7 +169,6 @@ export default function PasoDistribucion() {
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: esp.sm }}>
               <View style={{ width: 10, height: 10, borderRadius: 5, backgroundColor: b.color }} />
               <Texto variante="cuerpo" style={{ flex: 1 }}>{b.nombre}</Texto>
-              <Texto variante="monto" style={{ fontSize: 15 }}>{Math.round(b.porcentaje)}%</Texto>
               <Pressable
                 onPress={() => eliminar(idx)}
                 hitSlop={10}
@@ -161,12 +179,7 @@ export default function PasoDistribucion() {
                 <Ionicons name="trash-outline" size={18} color={t.textoTenue} />
               </Pressable>
             </View>
-            <Deslizador
-              valor={b.porcentaje}
-              color={b.color}
-              max={100}
-              onChange={(v) => cambiar(idx, v)}
-            />
+            <PasoPorcentaje valor={b.porcentaje} color={b.color} onChange={(v) => cambiar(idx, v)} />
             <View style={{ flexDirection: 'row', alignItems: 'center' }}>
               <Texto variante="micro" color="tenue" style={{ flex: 1 }}>Equivale a</Texto>
               <Texto variante="etiqueta" color="suave">

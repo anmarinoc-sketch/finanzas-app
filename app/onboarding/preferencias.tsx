@@ -34,8 +34,9 @@ export default function PasoPreferencias() {
       // 1. Ingresos. Se reemplazan en bloque para que rehacer la
       //    configuración desde Ajustes no los duplique.
       reemplazarIngresos(ob.ingresos.map((i) => ({
-        nombre: i.nombre, monto: i.monto, frecuencia: i.frecuencia,
-        activo: 1, fechaInicio: format(new Date(), 'yyyy-MM-dd'), cuentaId: null,
+        nombre: i.nombre, monto: i.monto, montoSecundario: i.montoSecundario ?? null,
+        frecuencia: i.frecuencia, activo: 1,
+        fechaInicio: format(new Date(), 'yyyy-MM-dd'), cuentaId: null,
       })) as any);
       // 2. Distribucion por bolsillos
       guardarDistribucion(ob.bolsillos.map((b, i) => ({

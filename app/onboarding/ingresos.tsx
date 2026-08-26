@@ -7,13 +7,13 @@ import { PasoOnboarding } from '@/ui/comp/PasoOnboarding';
 import { Tarjeta } from '@/ui/comp/Tarjeta';
 import { Texto } from '@/ui/comp/Texto';
 import { Boton } from '@/ui/comp/Boton';
-import { Campo } from '@/ui/comp/Campo';
+import { Campo, Interruptor } from '@/ui/comp/Campo';
 import { Chip } from '@/ui/comp/Chip';
 import { EstadoVacio } from '@/ui/comp/EstadoVacio';
 import { useTema } from '@/ui/TemaProvider';
 import { esp } from '@/ui/tema';
 import { formatoCOP, parsearMonto, separarMiles } from '@/core/dinero';
-import { aMensual, ingresoMensualEstimado } from '@/core/ingresos';
+import { ingresoMensualEstimado, mensualDeIngreso } from '@/core/ingresos';
 import { useOnboarding } from '@/store/onboarding';
 import type { Frecuencia } from '@/db/schema';
 
@@ -30,12 +30,29 @@ export default function PasoIngresos() {
   const [nom, setNom] = useState('');
   const [monto, setMonto] = useState('');
   const [frec, setFrec] = useState<Frecuencia>('mensual');
+  const [segunda, setSegunda] = useState('');
+  const [quincenasDistintas, setQuincenasDistintas] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const total = useMemo(
-    () => ingresoMensualEstimado(ingresos.map((i) => ({ monto: i.monto, frecuencia: i.frecuencia }))),
+    () => ingresoMensualEstimado(ingresos),
     [ingresos],
   );
+
+  const construir = (m: number) => ({
+    nombre: nom.trim(),
+    monto: Math.round(m),
+    frecuencia: frec,
+    // Solo tiene sentido en quincenal, y solo si el usuario lo marcó.
+    montoSecundario: frec === 'quincenal' && quincenasDistintas && parsearMonto(segunda) > 0
+      ? Math.round(parsearMonto(segunda))
+      : null,
+  });
+
+  const limpiar = () => {
+    setNom(''); setMonto(''); setSegunda('');
+    setFrec('mensual'); setQuincenasDistintas(false);
+  };
 
   /** ¿Hay un ingreso escrito en el formulario pero todavía sin agregar? */
   const pendiente = nom.trim().length > 0 && parsearMonto(monto) > 0;
@@ -45,8 +62,8 @@ export default function PasoIngresos() {
     if (!nom.trim()) return setError('Ponle un nombre al ingreso.');
     if (m <= 0) return setError('El monto debe ser mayor que cero.');
     setError(null);
-    agregarIngreso({ nombre: nom.trim(), monto: Math.round(m), frecuencia: frec });
-    setNom(''); setMonto(''); setFrec('mensual');
+    agregarIngreso(construir(m));
+    limpiar();
   };
 
   /**
@@ -56,8 +73,8 @@ export default function PasoIngresos() {
    */
   const continuar = () => {
     if (pendiente) {
-      agregarIngreso({ nombre: nom.trim(), monto: Math.round(parsearMonto(monto)), frecuencia: frec });
-      setNom(''); setMonto(''); setFrec('mensual');
+      agregarIngreso(construir(parsearMonto(monto)));
+      limpiar();
     }
     router.push('/onboarding/distribucion');
   };
@@ -111,6 +128,34 @@ export default function PasoIngresos() {
               ))}
             </View>
           </View>
+
+          {frec === 'quincenal' ? (
+            <View style={{ gap: esp.sm }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: esp.md }}>
+                <View style={{ flex: 1 }}>
+                  <Texto variante="cuerpo">Las quincenas son distintas</Texto>
+                  <Texto variante="micro" color="tenue">
+                    Actívalo si no te pagan lo mismo las dos veces.
+                  </Texto>
+                </View>
+                <Interruptor valor={quincenasDistintas} onChange={setQuincenasDistintas} />
+              </View>
+
+              {quincenasDistintas ? (
+                <Campo
+                  etiqueta="Monto de la segunda quincena"
+                  value={segunda ? separarMiles(parsearMonto(segunda)) : ''}
+                  onChangeText={setSegunda}
+                  keyboardType="number-pad"
+                  placeholder="0"
+                />
+              ) : (
+                <Texto variante="micro" color="tenue">
+                  Se asumen dos pagos iguales al mes: {formatoCOP(Math.round(parsearMonto(monto) * 2))}.
+                </Texto>
+              )}
+            </View>
+          ) : null}
           <Boton
             titulo={ingresos.length ? 'Agregar otro ingreso' : 'Agregar y registrar otro'}
             icono="add"
@@ -137,7 +182,7 @@ export default function PasoIngresos() {
                   <Texto variante="cuerpo">{i.nombre}</Texto>
                   <Texto variante="micro" color="tenue">
                     {FRECUENCIAS.find((f) => f.id === i.frecuencia)?.texto} ·{' '}
-                    {i.frecuencia === 'ocasional' ? 'no se proyecta' : `${formatoCOP(Math.round(aMensual(i.monto, i.frecuencia)))} al mes`}
+                    {i.frecuencia === 'ocasional' ? 'no se proyecta' : `${formatoCOP(mensualDeIngreso(i))} al mes`}
                   </Texto>
                 </View>
                 <Texto variante="monto">{formatoCOP(i.monto)}</Texto>

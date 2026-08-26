@@ -17,7 +17,7 @@ import { EstadoVacio } from '@/ui/comp/EstadoVacio';
 import { esp } from '@/ui/tema';
 
 import { formatoCOP, parsearMonto, separarMiles } from '@/core/dinero';
-import { aMensual } from '@/core/ingresos';
+import { mensualDeIngreso } from '@/core/ingresos';
 import { actualizarIngreso, borrarIngreso, crearIngreso } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
 import type { Frecuencia } from '@/db/schema';
@@ -38,6 +38,8 @@ export default function AjustesIngresos() {
   const [nombre, setNombre] = useState('');
   const [monto, setMonto] = useState('');
   const [frecuencia, setFrecuencia] = useState<Frecuencia>('mensual');
+  const [segunda, setSegunda] = useState('');
+  const [quincenasDistintas, setQuincenasDistintas] = useState(false);
 
   useFocusEffect(useCallback(() => { refrescar(); }, [refrescar]));
 
@@ -47,9 +49,13 @@ export default function AjustesIngresos() {
     if (m <= 0) return Alert.alert('Monto inválido', 'El monto debe ser mayor que cero.');
     conRefresco(() => crearIngreso({
       nombre: nombre.trim(), monto: Math.round(m), frecuencia,
+      montoSecundario: frecuencia === 'quincenal' && quincenasDistintas && parsearMonto(segunda) > 0
+        ? Math.round(parsearMonto(segunda))
+        : null,
       activo: 1, fechaInicio: format(new Date(), 'yyyy-MM-dd'), cuentaId: null,
     } as any));
-    setNombre(''); setMonto(''); setFrecuencia('mensual');
+    setNombre(''); setMonto(''); setSegunda('');
+    setFrecuencia('mensual'); setQuincenasDistintas(false);
     setHoja(false);
   };
 
@@ -80,7 +86,8 @@ export default function AjustesIngresos() {
               <Texto variante="cuerpo">{i.nombre}</Texto>
               <Texto variante="micro" color="tenue">
                 {FRECUENCIAS.find((f) => f.id === i.frecuencia)?.texto}
-                {i.frecuencia !== 'ocasional' ? ` · ${formatoCOP(Math.round(aMensual(i.monto, i.frecuencia)))}/mes` : ''}
+                {i.frecuencia !== 'ocasional' ? ` · ${formatoCOP(mensualDeIngreso(i))}/mes` : ''}
+                {i.montoSecundario ? ` (${formatoCOP(i.monto)} + ${formatoCOP(i.montoSecundario)})` : ''}
               </Texto>
             </View>
             <Texto variante="monto">{formatoCOP(i.monto)}</Texto>
@@ -113,6 +120,27 @@ export default function AjustesIngresos() {
             ))}
           </View>
         </View>
+
+        {frecuencia === 'quincenal' ? (
+          <View style={{ gap: esp.sm }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: esp.md }}>
+              <View style={{ flex: 1 }}>
+                <Texto variante="cuerpo">Las quincenas son distintas</Texto>
+                <Texto variante="micro" color="tenue">Actívalo si no te pagan lo mismo las dos veces.</Texto>
+              </View>
+              <Interruptor valor={quincenasDistintas} onChange={setQuincenasDistintas} />
+            </View>
+            {quincenasDistintas ? (
+              <Campo
+                etiqueta="Monto de la segunda quincena"
+                value={segunda ? separarMiles(parsearMonto(segunda)) : ''}
+                onChangeText={setSegunda}
+                keyboardType="number-pad"
+                placeholder="0"
+              />
+            ) : null}
+          </View>
+        ) : null}
         <Boton titulo="Guardar" ancho onPress={guardar} />
       </Hoja>
     </SafeAreaView>

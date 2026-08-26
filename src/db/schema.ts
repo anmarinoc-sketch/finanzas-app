@@ -36,6 +36,8 @@ export const ingresos = sqliteTable('ingresos', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   nombre: text('nombre').notNull(),
   monto: integer('monto').notNull(),
+  /** Segunda quincena, cuando las dos no son iguales. Solo aplica a frecuencia quincenal. */
+  montoSecundario: integer('monto_secundario'),
   frecuencia: text('frecuencia').$type<Frecuencia>().notNull().default('mensual'),
   activo: integer('activo').notNull().default(1),
   fechaInicio: text('fecha_inicio').notNull(),

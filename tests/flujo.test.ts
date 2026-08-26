@@ -16,7 +16,7 @@ jest.mock('expo-sqlite', () => {
 import { migrar } from '../src/db/bootstrap';
 import { sembrarCatalogos } from '../src/db/seed';
 import {
-  archivarCategoria, cargaCuotasDelMes, comprasACuotas, crearIngreso,
+  archivarCategoria, borrarBolsillo, crearBolsillo, cargaCuotasDelMes, comprasACuotas, crearIngreso,
   guardarDistribucion, guardarUsuario, listarBolsillos, listarCategorias,
   listarCategoriasRaiz, listarCuentas, listarDeudas, listarIngresos,
   listarMetas, listarMovimientos, listarRecurrentes, listarTarjetas, reemplazarIngresos,
@@ -27,7 +27,8 @@ import {
   gastoPorMedio, topComercios, totalCategoriaEnRango, totalesPeriodo,
 } from '../src/db/consultas';
 import { cicloDe, moverCiclo, progresoCiclo, ultimosCiclos } from '../src/core/fechas';
-import { ingresoMensualEstimado } from '../src/core/ingresos';
+import { bdNativa } from '../src/db/cliente';
+import { ingresoMensualEstimado, mensualDeIngreso } from '../src/core/ingresos';
 import { evaluarPresupuesto } from '../src/core/presupuesto';
 
 beforeAll(() => {
@@ -171,5 +172,54 @@ suite('reconfigurar sin duplicar ni resucitar', () => {
 
     archivarCategoria(objetivo.id, false);
     expect(listarCategoriasRaiz().some((c) => c.id === objetivo.id)).toBe(true);
+  });
+});
+
+suite('un bolsillo borrado no vuelve', () => {
+  test('borrarBolsillo lo saca de la base de inmediato y no reaparece', () => {
+    // Autocontenida: crea el bolsillo que va a borrar, para no depender del
+    // estado que dejaron las pruebas anteriores.
+    crearBolsillo({
+      nombre: 'Prueba borrado', porcentaje: 0, color: '#EF4444',
+      icono: 'card-outline', tipo: 'personalizado', orden: 99,
+    } as any);
+    const creado = listarBolsillos().find((b) => b.nombre === 'Prueba borrado');
+    expect(creado).toBeDefined();
+    const antes = listarBolsillos().length;
+
+    borrarBolsillo(creado!.id);
+    expect(listarBolsillos().some((b) => b.nombre === 'Prueba borrado')).toBe(false);
+
+    // sembrarCatalogos corre en cada arranque: no debe resucitar nada.
+    sembrarCatalogos();
+    expect(listarBolsillos().some((b) => b.nombre === 'Prueba borrado')).toBe(false);
+    expect(listarBolsillos()).toHaveLength(antes - 1);
+  });
+
+  test('el bolsillo de deudas que se quitó en el onboarding sigue sin estar', () => {
+    expect(listarBolsillos().some((b) => b.tipo === 'deudas')).toBe(false);
+  });
+
+  test('guardar la distribución después no lo trae de vuelta', () => {
+    const actuales = listarBolsillos();
+    guardarDistribucion(actuales.map((b, i) => ({
+      id: b.id, nombre: b.nombre, porcentaje: Math.round(100 / actuales.length),
+      color: b.color, icono: b.icono, tipo: b.tipo, orden: i,
+    })));
+    expect(listarBolsillos().some((b) => b.tipo === 'deudas')).toBe(false);
+  });
+
+  test('la migración v3 añadió la columna de la segunda quincena', () => {
+    const cols = bdNativa.getAllSync<{ name: string }>('PRAGMA table_info(ingresos)').map((c) => c.name);
+    expect(cols).toContain('monto_secundario');
+  });
+
+  test('el monto de la segunda quincena se guarda y se lee', () => {
+    reemplazarIngresos([
+      { nombre: 'Sueldo', monto: 1_800_000, montoSecundario: 2_400_000, frecuencia: 'quincenal', activo: 1, fechaInicio: '2026-08-24', cuentaId: null },
+    ] as any);
+    const i = listarIngresos()[0];
+    expect(i.montoSecundario).toBe(2_400_000);
+    expect(mensualDeIngreso(i)).toBe(4_200_000);
   });
 });
