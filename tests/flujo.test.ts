@@ -16,7 +16,7 @@ jest.mock('expo-sqlite', () => {
 import { migrar } from '../src/db/bootstrap';
 import { sembrarCatalogos } from '../src/db/seed';
 import {
-  archivarCategoria, borrarBolsillo, crearBolsillo, cargaCuotasDelMes, comprasACuotas, crearIngreso,
+  archivarCategoria, borrarBolsillo, crearBolsillo, crearTransaccion, cargaCuotasDelMes, comprasACuotas, crearIngreso,
   guardarDistribucion, guardarUsuario, listarBolsillos, listarCategorias,
   listarCategoriasRaiz, listarCuentas, listarDeudas, listarIngresos,
   listarMetas, listarMovimientos, listarRecurrentes, listarTarjetas, reemplazarIngresos,
@@ -253,5 +253,45 @@ suite('las migraciones no pueden dejar la app atrapada', () => {
   test('la columna de la segunda quincena sigue ahí tras reaplicar', () => {
     const cols = bdNativa.getAllSync<{ name: string }>('PRAGMA table_info(ingresos)').map((c) => c.name);
     expect(cols.filter((c) => c === 'monto_secundario')).toHaveLength(1);
+  });
+});
+
+suite('reiniciar la configuración no borra los movimientos', () => {
+  test('poner onboardingCompleto en 0 conserva todo lo registrado', () => {
+    // Es lo que hace "volver a hacer la configuración" del modo recuperación.
+    // El asistente vuelve a aparecer, pero los datos siguen ahí: de esa
+    // confusión salió el susto de creer que se había perdido todo.
+    // Un movimiento propio: esta suite no crea ninguno por su cuenta.
+    crearTransaccion({
+      tipo: 'gasto', monto: 45_000, fecha: '2026-09-18',
+      categoriaId: listarCategoriasRaiz()[0].id, medioPago: 'efectivo',
+      descripcion: 'Mercado de prueba', etiquetas: '', creadoEn: '2026-09-18',
+    } as any);
+    const antes = contarMovimientos();
+    expect(antes).toBeGreaterThan(0);
+
+    guardarUsuario({ onboardingCompleto: 0 });
+    expect(obtenerUsuario()?.onboardingCompleto).toBe(0);
+    expect(contarMovimientos()).toBe(antes);
+
+    // Y volver a entrar sin reconfigurar tampoco toca nada.
+    guardarUsuario({ onboardingCompleto: 1 });
+    expect(contarMovimientos()).toBe(antes);
+  });
+
+  test('terminar el asistente otra vez no borra movimientos', () => {
+    const antes = contarMovimientos();
+    // Lo que hace finalizar(): reemplaza ingresos, distribución y categorías.
+    reemplazarIngresos([
+      { nombre: 'Otro sueldo', monto: 3_000_000, frecuencia: 'mensual', activo: 1, fechaInicio: '2026-09-18', cuentaId: null },
+    ] as any);
+    const bolsillos = listarBolsillos();
+    guardarDistribucion(bolsillos.map((b, i) => ({
+      id: b.id, nombre: b.nombre, porcentaje: Math.round(100 / bolsillos.length),
+      color: b.color, icono: b.icono, tipo: b.tipo, orden: i,
+    })));
+    listarCategorias(true).filter((c) => !c.padreId).forEach((c) => archivarCategoria(c.id, false));
+
+    expect(contarMovimientos()).toBe(antes);
   });
 });

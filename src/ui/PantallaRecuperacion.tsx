@@ -5,7 +5,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { confirmarArranque, leerUltimoError, limpiarError } from '@/servicios/diagnostico';
 import { migrar, vaciarDatos } from '@/db/bootstrap';
 import { sembrarCatalogos } from '@/db/seed';
-import { guardarUsuario, obtenerUsuario } from '@/db/crud';
+import { contarMovimientos, guardarUsuario, obtenerUsuario } from '@/db/crud';
 import { crearRespaldo } from '@/servicios/respaldoAuto';
 
 /**
@@ -16,6 +16,9 @@ import { crearRespaldo } from '@/servicios/respaldoAuto';
  */
 export function PantallaRecuperacion({ onContinuar }: { onContinuar: () => void }) {
   const [error] = useState(() => leerUltimoError());
+  // Cuántos datos hay realmente. Sin este dato, el usuario elige a ciegas
+  // entre opciones que conservan y opciones que borran.
+  const [movimientos] = useState(() => { try { return contarMovimientos(); } catch { return 0; } });
   const [copiado, setCopiado] = useState(false);
 
   const detalle = error
@@ -91,6 +94,17 @@ const borrarTodo = () => {
           </Pressable>
         </View>
 
+        {movimientos > 0 ? (
+          <View style={{ backgroundColor: '#0F2A22', borderRadius: 14, padding: 16, gap: 4, borderWidth: 1, borderColor: '#166534' }}>
+            <Text style={{ color: '#34D399', fontSize: 15, fontWeight: '700' }}>
+              Tienes {movimientos} movimientos guardados
+            </Text>
+            <Text style={{ color: '#A7AEBF', fontSize: 13, lineHeight: 19 }}>
+              Siguen ahí. Las tres primeras opciones de abajo NO los borran. Solo la última.
+            </Text>
+          </View>
+        ) : null}
+
         <Opcion
           titulo="Continuar de todos modos"
           texto="Intenta abrir la app normalmente. Si vuelve a cerrarse, regresarás aquí."
@@ -103,12 +117,12 @@ const borrarTodo = () => {
         />
         <Opcion
           titulo="Volver a hacer la configuración inicial"
-          texto="Conserva tus movimientos, pero repite los 4 pasos de configuración."
+          texto="Repite los 4 pasos. Tus movimientos NO se borran: seguirán ahí al terminar."
           onPress={rehacerConfiguracion}
         />
         <Opcion
           titulo="Borrar todos los datos"
-          texto="Deja la app como recién instalada. Última opción."
+          texto="La única opción que borra. Deja la app como recién instalada. Se guarda una copia antes, por si acaso."
           onPress={borrarTodo}
           peligro
         />

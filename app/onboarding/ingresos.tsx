@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, View } from 'react-native';
+import { Alert, Pressable, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 
@@ -15,6 +15,9 @@ import { esp } from '@/ui/tema';
 import { formatoCOP, parsearMonto, separarMiles } from '@/core/dinero';
 import { ingresoMensualEstimado, mensualDeIngreso } from '@/core/ingresos';
 import { useOnboarding } from '@/store/onboarding';
+import { useAjustes } from '@/store/ajustes';
+import { useDatos } from '@/store/datos';
+import { contarMovimientos } from '@/db/crud';
 import type { Frecuencia } from '@/db/schema';
 
 const FRECUENCIAS: { id: Frecuencia; texto: string }[] = [
@@ -27,12 +30,38 @@ const FRECUENCIAS: { id: Frecuencia; texto: string }[] = [
 export default function PasoIngresos() {
   const t = useTema();
   const { ingresos, agregarIngreso, quitarIngreso, nombre, set } = useOnboarding();
+  const aplicar = useAjustes((s) => s.aplicar);
+  const refrescar = useDatos((s) => s.refrescar);
   const [nom, setNom] = useState('');
   const [monto, setMonto] = useState('');
   const [frec, setFrec] = useState<Frecuencia>('mensual');
   const [segunda, setSegunda] = useState('');
   const [quincenasDistintas, setQuincenasDistintas] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  /**
+   * Movimientos que YA existen en el teléfono.
+   *
+   * Puede haber datos guardados y estar viendo este asistente: basta con que
+   * algo haya puesto onboardingCompleto en 0, como la opción "volver a hacer
+   * la configuración" del modo recuperación. Sin este aviso, el usuario cree
+   * que perdió todo y vuelve a empezar de cero encima de sus propios datos.
+   */
+  const yaRegistrados = useMemo(() => contarMovimientos(), []);
+
+  const entrarSinTocarNada = () => {
+    Alert.alert(
+      'Entrar sin cambiar nada',
+      `Se abrirá la app con los ${yaRegistrados} movimientos que ya están guardados. No se modifica ni se borra nada.`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Entrar',
+          onPress: () => { aplicar({ onboardingCompleto: 1 }); refrescar(); router.replace('/'); },
+        },
+      ],
+    );
+  };
 
   const total = useMemo(
     () => ingresoMensualEstimado(ingresos),
@@ -102,6 +131,23 @@ export default function PasoIngresos() {
       }
     >
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={{ gap: esp.md, paddingBottom: esp.lg }}>
+        {yaRegistrados > 0 ? (
+          <Tarjeta style={{ gap: esp.md, borderLeftWidth: 4, borderLeftColor: t.verde }}>
+            <View style={{ flexDirection: 'row', alignItems: 'center', gap: esp.sm }}>
+              <Ionicons name="shield-checkmark" size={20} color={t.verde} />
+              <Texto variante="seccion" style={{ flex: 1 }}>Tus datos están a salvo</Texto>
+            </View>
+            <Texto variante="cuerpo" color="suave" style={{ lineHeight: 21 }}>
+              Este teléfono ya tiene <Texto variante="cuerpo" color="verde">{yaRegistrados} movimientos</Texto> guardados.
+              Estás viendo esta pantalla porque la configuración inicial se reinició, no porque se haya
+              borrado nada. Puedes entrar directamente sin volver a configurar.
+            </Texto>
+            <Boton titulo="Entrar sin cambiar nada" icono="arrow-forward" ancho onPress={entrarSinTocarNada} />
+            <Texto variante="micro" color="tenue">
+              Si prefieres reconfigurar, sigue los 4 pasos: tus movimientos no se tocan.
+            </Texto>
+          </Tarjeta>
+        ) : null}
         <Campo
           etiqueta="¿Cómo te llamas? (opcional)"
           value={nombre}
