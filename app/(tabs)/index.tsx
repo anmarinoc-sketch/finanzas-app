@@ -29,6 +29,18 @@ import { configurarNotificacionesUnaVez } from '@/servicios/notificaciones';
 import { FilaMovimiento } from '@/ui/comp/FilaMovimiento';
 import { conFrontera } from '@/ui/Frontera';
 
+/**
+ * De que se mide el gasto del ciclo. La etiqueta tiene que decir la verdad: si
+ * no hay presupuesto ni sueldo configurado, se compara con los ingresos que se
+ * hayan registrado, y hay que decirlo.
+ */
+const ETIQUETA_BASE: Record<string, string> = {
+  presupuesto: 'Presupuesto del ciclo',
+  estimado: 'Sobre tu ingreso estimado',
+  registrado: 'Sobre tus ingresos del ciclo',
+  ninguna: 'Sin presupuesto ni ingresos registrados todavía',
+};
+
 function Inicio() {
   const t = useTema();
   const { width } = useWindowDimensions();
@@ -127,7 +139,7 @@ function Inicio() {
             <BarraProgreso valor={r.global.fraccion} color={r.global.color} alto={10} />
             <View style={{ flexDirection: 'row' }}>
               <Texto variante="micro" color="tenue" style={{ flex: 1 }}>
-                {r.presupuestoTotal > 0 ? 'Presupuesto del ciclo' : 'Sobre tu ingreso estimado'}: {formatoCOP(r.global.presupuesto)}
+                {ETIQUETA_BASE[r.baseTecho]}{r.baseTecho === 'ninguna' ? '' : `: ${formatoCOP(r.global.presupuesto)}`}
               </Texto>
               <Texto variante="micro" color={r.global.fraccion > 1 ? 'rojo' : 'suave'}>
                 {formatoPct(r.global.fraccion * 100)}
@@ -268,7 +280,9 @@ function Inicio() {
               </Pressable>
             </View>
             {r.bolsillos.map((b) => {
-              const asignado = Math.round(r.ingresoMensual * b.porcentaje / 100);
+              // Sobre la misma base que el resto de la tarjeta: ingreso
+              // configurado si hay, y si no, lo que se haya ingresado en el ciclo.
+              const asignado = Math.round(r.baseIngreso * b.porcentaje / 100);
               const gastado = r.categorias
                 .filter((c) => c.bolsilloId === b.id)
                 .reduce((a, c) => a + c.total, 0);

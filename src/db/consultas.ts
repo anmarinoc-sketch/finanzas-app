@@ -1,6 +1,7 @@
 import { format } from 'date-fns';
 import { bdNativa } from './cliente';
 import type { Rango } from '@/core/fechas';
+import { etiquetasFila } from '@/core/movimientos';
 
 const iso = (d: Date) => format(d, 'yyyy-MM-dd');
 
@@ -101,16 +102,46 @@ export function gastoPorDiaSemana(r: Rango) {
   );
 }
 
-/** Top de comercios / descripciones donde mas se gasta. */
+/**
+ * Top de comercios donde mas se gasta.
+ *
+ * Agrupa por la MISMA etiqueta que encabeza la fila del historial: si la
+ * descripcion es solo una forma de pago, cuenta como su categoria. Sin eso, el
+ * grafico titulaba "Transferencia" o "Efectivo" al comercio con mas gasto, que
+ * no le dice nada a nadie. La suma en SQL agrupa por descripcion y categoria
+ * (pocas parejas distintas) y el reagrupado final se hace aqui con la funcion
+ * pura, para que las dos pantallas no puedan discrepar.
+ */
 export function topComercios(r: Rango, limite = 10) {
-  return bdNativa.getAllSync<{ descripcion: string; total: number; veces: number; color: string | null }>(
-    `SELECT CASE WHEN TRIM(t.descripcion) = '' THEN 'Sin descripción' ELSE TRIM(t.descripcion) END AS descripcion,
+  const filas = bdNativa.getAllSync<{
+    descripcion: string; categoriaNombre: string | null;
+    total: number; veces: number; color: string | null;
+  }>(
+    `SELECT TRIM(t.descripcion) AS descripcion, c.nombre AS categoriaNombre,
             SUM(t.monto) AS total, COUNT(*) AS veces, MAX(c.color) AS color
        FROM transacciones t LEFT JOIN categorias c ON c.id = t.categoria_id
       WHERE t.tipo = 'gasto' AND t.fecha BETWEEN ? AND ?
-      GROUP BY descripcion ORDER BY total DESC LIMIT ?`,
-    [iso(r.desde), iso(r.hasta), limite],
+      GROUP BY descripcion, c.nombre`,
+    [iso(r.desde), iso(r.hasta)],
   );
+
+  const mapa = new Map<string, { descripcion: string; total: number; veces: number; color: string | null }>();
+  for (const f of filas) {
+    const desc = (f.descripcion ?? '').trim();
+    const cat = (f.categoriaNombre ?? '').trim();
+    const clave = desc || cat
+      ? etiquetasFila({ tipo: 'gasto', descripcion: desc, categoriaNombre: cat }).titulo
+      : 'Sin descripción';
+    const previo = mapa.get(clave);
+    if (previo) {
+      previo.total += f.total;
+      previo.veces += f.veces;
+      previo.color = previo.color ?? f.color;
+    } else {
+      mapa.set(clave, { descripcion: clave, total: f.total, veces: f.veces, color: f.color });
+    }
+  }
+  return [...mapa.values()].sort((a, b) => b.total - a.total).slice(0, limite);
 }
 
 /** Totales de gasto e ingreso para cada uno de los rangos dados (barras mes a mes). */

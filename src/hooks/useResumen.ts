@@ -59,8 +59,18 @@ export function useResumen() {
 
     const presupuestoTotal = categorias.reduce((a, c) => a + c.presupuesto, 0);
 
-    // Disponible del ciclo: presupuesto total si existe, si no el ingreso estimado.
-    const techo = presupuestoTotal > 0 ? presupuestoTotal : ingresoMensual;
+    // Base contra la que se mide el gasto del ciclo, en orden de preferencia:
+    // el presupuesto si hay, si no el ingreso configurado, y si tampoco hay,
+    // los ingresos realmente registrados en el ciclo. Sin ese ultimo paso, quien
+    // registra su sueldo como movimiento en vez de configurarlo veia "sobre tu
+    // ingreso estimado: $ 0" y "disponible para hoy: $ 0" mientras el encabezado
+    // de la misma tarjeta mostraba millones de ingresos.
+    const baseIngreso = ingresoMensual > 0 ? ingresoMensual : totales.ingresos;
+    const techo = presupuestoTotal > 0 ? presupuestoTotal : baseIngreso;
+    const baseTecho: 'presupuesto' | 'estimado' | 'registrado' | 'ninguna' =
+      presupuestoTotal > 0 ? 'presupuesto'
+        : ingresoMensual > 0 ? 'estimado'
+          : totales.ingresos > 0 ? 'registrado' : 'ninguna';
     const global = evaluarPresupuesto(techo, totales.gastos, prog.transcurridos, prog.total);
 
     const suscripciones = recurrentes.filter((r) => r.activo && r.esSuscripcion);
@@ -73,7 +83,7 @@ export function useResumen() {
 
     return {
       rango, anterior, prog, totales, totalesAnterior, categorias, presupuestos,
-      presupuestoTotal, global, fijos, bolsillos, ingresoMensual,
+      presupuestoTotal, global, baseTecho, baseIngreso, fijos, bolsillos, ingresoMensual,
       etiqueta: etiquetaCiclo(rango, diaInicio),
       etiquetaAnterior: etiquetaCiclo(anterior, diaInicio),
       diasRestantes: prog.restantes,

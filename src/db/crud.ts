@@ -349,6 +349,7 @@ export type FiltroMovimientos = {
   categoriaIds?: number[];
   medios?: string[];
   cuentaIds?: number[];
+  tarjetaIds?: number[];
   texto?: string;
   montoMin?: number; montoMax?: number;
   limite?: number; offset?: number;
@@ -367,7 +368,16 @@ export type MovimientoVista = Transaccion & {
  * siendo fluida con decenas de miles de filas: el indice idx_tx_fecha hace
  * el trabajo y solo viaja a JS la pagina visible.
  */
-export function listarMovimientos(f: FiltroMovimientos = {}): MovimientoVista[] {
+/**
+ * Condiciones WHERE del historial, compartidas por la lista y por sus totales.
+ *
+ * Estan juntas a proposito: la lista trae solo una pagina y los totales tienen
+ * que sumar TODO lo filtrado. Si cada uno armara su propio WHERE, un dia
+ * dejarian de coincidir, y ya paso: el encabezado de Movimientos sumaba en JS
+ * la pagina cargada, asi que con mas de 60 movimientos en el ciclo mostraba
+ * cifras mas bajas que el inicio, que si suma en SQL.
+ */
+function condicionesMovimientos(f: FiltroMovimientos) {
   const cond: string[] = ['1=1'];
   const args: any[] = [];
   const push = (sqlFrag: string, ...vals: any[]) => { cond.push(sqlFrag); args.push(...vals); };
@@ -379,6 +389,7 @@ export function listarMovimientos(f: FiltroMovimientos = {}): MovimientoVista[] 
     push(`t.categoria_id IN (${f.categoriaIds.map(() => '?').join(',')})`, ...f.categoriaIds);
   if (f.medios?.length) push(`t.medio_pago IN (${f.medios.map(() => '?').join(',')})`, ...f.medios);
   if (f.cuentaIds?.length) push(`t.cuenta_id IN (${f.cuentaIds.map(() => '?').join(',')})`, ...f.cuentaIds);
+  if (f.tarjetaIds?.length) push(`t.tarjeta_id IN (${f.tarjetaIds.map(() => '?').join(',')})`, ...f.tarjetaIds);
   if (f.texto) {
     push('(t.descripcion LIKE ? OR t.notas LIKE ? OR t.etiquetas LIKE ?)',
       `%${f.texto}%`, `%${f.texto}%`, `%${f.texto}%`);
@@ -386,6 +397,35 @@ export function listarMovimientos(f: FiltroMovimientos = {}): MovimientoVista[] 
   if (f.montoMin != null) push('t.monto >= ?', f.montoMin);
   if (f.montoMax != null) push('t.monto <= ?', f.montoMax);
 
+  return { donde: cond.join(' AND '), args };
+}
+
+export type TotalesFiltrados = {
+  gastos: number; ingresos: number; neto: number; cuantos: number;
+};
+
+/**
+ * Totales de TODO lo que cumple el filtro, no de la pagina cargada. Se suma en
+ * SQL, igual que en el inicio, para que las dos pantallas no puedan discrepar.
+ */
+export function totalesMovimientos(f: FiltroMovimientos = {}): TotalesFiltrados {
+  const { donde, args } = condicionesMovimientos(f);
+  const fila = bdNativa.getFirstSync<{ gastos: number; ingresos: number; cuantos: number }>(
+    `SELECT
+       COALESCE(SUM(CASE WHEN t.tipo = 'gasto' THEN t.monto ELSE 0 END), 0) AS gastos,
+       COALESCE(SUM(CASE WHEN t.tipo = 'ingreso' THEN t.monto ELSE 0 END), 0) AS ingresos,
+       COUNT(*) AS cuantos
+       FROM transacciones t
+      WHERE ${donde}`,
+    args,
+  );
+  const gastos = fila?.gastos ?? 0;
+  const ingresos = fila?.ingresos ?? 0;
+  return { gastos, ingresos, neto: ingresos - gastos, cuantos: fila?.cuantos ?? 0 };
+}
+
+export function listarMovimientos(f: FiltroMovimientos = {}): MovimientoVista[] {
+  const { donde, args } = condicionesMovimientos(f);
   args.push(f.limite ?? 300, f.offset ?? 0);
   return bdNativa.getAllSync<any>(
     `SELECT t.*, c.nombre AS categoriaNombre, c.color AS categoriaColor, c.icono AS categoriaIcono,
@@ -394,7 +434,7 @@ export function listarMovimientos(f: FiltroMovimientos = {}): MovimientoVista[] 
        LEFT JOIN categorias c ON c.id = t.categoria_id
        LEFT JOIN cuentas cu ON cu.id = t.cuenta_id
        LEFT JOIN tarjetas ta ON ta.id = t.tarjeta_id
-      WHERE ${cond.join(' AND ')}
+      WHERE ${donde}
       ORDER BY t.fecha DESC, t.id DESC
       LIMIT ? OFFSET ?`,
     args,

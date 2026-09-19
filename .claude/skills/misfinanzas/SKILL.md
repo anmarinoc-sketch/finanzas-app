@@ -42,7 +42,7 @@ compilación: hay `paths-ignore: ['**.md']` y se puede añadir `[skip ci]` al co
 npm run verificar
 ```
 
-   Revisa tipos, rutas duplicadas, áreas seguras, fronteras de error y las 109
+   Revisa tipos, rutas duplicadas, áreas seguras, fronteras de error y las 125
    pruebas. Es exactamente lo que corre la CI.
    Para cambios que tocan dependencias o configuración nativa, además:
 
@@ -197,6 +197,38 @@ global y ofrece abrir sin notificaciones ni bloqueo, rehacer la configuración, 
 la copia más reciente o borrar los datos. El borrado es la última opción y la única que
 borra; la pantalla lo dice explícitamente y muestra cuántos movimientos hay guardados.
 
+**13. Un total sumado en JavaScript sobre la página cargada.** El encabezado de
+Movimientos sumaba los gastos e ingresos de las filas que tenía en pantalla (60, la
+página), mientras el inicio los sumaba en SQL sobre todo el ciclo. Con más de 60
+movimientos en el mes —lo normal— las dos pantallas mostraban cifras distintas para lo
+mismo, y Andrés lo vio: "no conversan las cifras". Ahora `totalesMovimientos()` suma en
+SQL con las mismas condiciones que la lista, compartidas en `condicionesMovimientos()`
+para que no puedan separarse. Regla: **ningún total se suma en JavaScript sobre una
+consulta con LIMIT.** `tests/coherencia.test.ts` lo fija con 143 movimientos en un ciclo,
+y una de sus pruebas reproduce el fallo antiguo para explicar por qué existe la otra.
+
+Del mismo tipo, también corregido: el detalle de una tarjeta traía los 40 últimos
+movimientos de todo el historial y los filtraba en JS, así que una tarjeta con saldo podía
+verse sin ningún movimiento. Ahora filtra por `tarjetaIds` en SQL.
+
+**14. Cifras que se miden contra un cero.** Si no hay presupuesto ni sueldo configurado,
+el inicio comparaba el gasto contra 0: "Sobre tu ingreso estimado: $ 0", 0%, "Disponible
+para hoy: $ 0" — y justo al lado, "Ingresos: $ 9.243.984". Quien registra su sueldo como
+movimiento en vez de configurarlo veía toda la tarjeta inútil. La base es ahora, por
+orden: presupuesto, ingreso configurado, ingresos registrados en el ciclo. Y la etiqueta
+dice cuál se está usando (`baseTecho` en `useResumen`), porque una cifra sin decir contra
+qué se mide es la forma más fácil de que dos pantallas parezcan contradecirse.
+
+**15. La descripción encabezando la fila cuando no aporta.** En el historial aparecían
+filas tituladas "Transferencia", "Efectivo" o "Cuenta", con el comercio real ("Ara",
+"Proteína") escondido en la línea gris. No era un dato mal guardado: el título es el campo
+"Comercio o descripción", y ahí se escribía la forma de pago. `etiquetasFila()` en
+`src/core/movimientos.ts` decide el título: si la descripción es solo una forma de pago y
+hay categoría, encabeza la categoría y la descripción baja al detalle. Nada de lo escrito
+se pierde, solo cambia el orden. `topComercios` agrupa por esa misma etiqueta, para que
+el gráfico no llame comercio a un medio de pago. Lección general: cuando la interfaz se
+ve mal, comprobar primero si el dato está bien y lo que falla es el orden en que se
+muestra.
 **Es la vía de diagnóstico principal.** Pedirle a Andrés una captura de esa pantalla
 resuelve en una iteración lo que de otro modo son horas de suposiciones.
 
@@ -239,6 +271,12 @@ profunda:
    seguridad). Las tres anteriores están en el mismo teléfono: si se pierde, se van con
    él. Por eso la app lleva la cuenta de cuándo fue la última y lo recuerda al pasar
    30 días.
+
+Y una regla de coherencia, del mismo peso: **un mismo concepto en el mismo periodo da el
+mismo número en todas las pantallas.** Los totales se suman en SQL sobre todo lo filtrado,
+nunca en JavaScript sobre una página, y cada desglose (categoría, medio, bolsillo, día,
+comercio) debe sumar exactamente el total del periodo. Lo comprueba
+`tests/coherencia.test.ts`.
 
 Al añadir cualquier acción que borre o reemplace datos, engancharla a la capa 2 o 3.
 Es una regla, no una sugerencia: la pérdida de datos real ocurrió por un borrado que no

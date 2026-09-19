@@ -21,7 +21,7 @@ import { esp, radio, TOQUE_MIN } from '@/ui/tema';
 
 import { formatoCOP, parsearMonto, separarMiles } from '@/core/dinero';
 import { MEDIOS_PAGO } from '@/constantes/medios';
-import { listarMovimientos, type MovimientoVista } from '@/db/crud';
+import { listarMovimientos, totalesMovimientos, type MovimientoVista } from '@/db/crud';
 import { useDatos } from '@/store/datos';
 import { usePeriodo, rangoActual } from '@/store/periodo';
 import { useAjustes } from '@/store/ajustes';
@@ -52,7 +52,8 @@ function Movimientos() {
 
   const rango = rangoActual(diaInicio, offset);
 
-  const filtro = useMemo(() => ({
+  // El filtro sin la pagina: los totales no dependen de cuanto se haya cargado.
+  const filtroBase = useMemo(() => ({
     desde: todoElHistorial ? undefined : rango.desde,
     hasta: todoElHistorial ? undefined : rango.hasta,
     tipos: tipos.length ? tipos : undefined,
@@ -61,20 +62,17 @@ function Movimientos() {
     texto: texto.trim() || undefined,
     montoMin: montoMin ? parsearMonto(montoMin) : undefined,
     montoMax: montoMax ? parsearMonto(montoMax) : undefined,
-    limite,
-  }), [rango.desde, rango.hasta, todoElHistorial, tipos, cats, medios, texto, montoMin, montoMax, limite]);
+  }), [rango.desde, rango.hasta, todoElHistorial, tipos, cats, medios, texto, montoMin, montoMax]);
+
+  const filtro = useMemo(() => ({ ...filtroBase, limite }), [filtroBase, limite]);
 
   const movimientos = useMemo(() => listarMovimientos(filtro), [filtro, revision]);
 
-  // Totales de lo filtrado (sobre la pagina cargada, que es lo que se ve).
-  const totales = useMemo(() => movimientos.reduce(
-    (a, m) => {
-      if (m.tipo === 'gasto') a.gastos += m.monto;
-      if (m.tipo === 'ingreso') a.ingresos += m.monto;
-      return a;
-    },
-    { gastos: 0, ingresos: 0 },
-  ), [movimientos]);
+  // Totales sumados en SQL sobre TODO lo filtrado, no sobre la pagina cargada.
+  // Antes se sumaba en JS lo que ya estaba en pantalla: con mas de 60
+  // movimientos en el ciclo, el encabezado mostraba menos que el inicio. Las
+  // dos pantallas usan ahora el mismo rango y la misma suma.
+  const totales = useMemo(() => totalesMovimientos(filtroBase), [filtroBase, revision]);
 
   // Encabezados de dia intercalados en la lista.
   const filas = useMemo(() => {
@@ -166,7 +164,7 @@ function Movimientos() {
         <View style={{ flexDirection: 'row', gap: esp.sm }}>
           <Resumen etiqueta="Gastos" valor={formatoCOP(totales.gastos)} color={t.rojo} />
           <Resumen etiqueta="Ingresos" valor={formatoCOP(totales.ingresos)} color={t.verde} />
-          <Resumen etiqueta="Balance" valor={formatoCOP(totales.ingresos - totales.gastos)} color={t.texto} />
+          <Resumen etiqueta="Balance" valor={formatoCOP(totales.neto)} color={totales.neto >= 0 ? t.texto : t.rojo} />
         </View>
       </View>
 

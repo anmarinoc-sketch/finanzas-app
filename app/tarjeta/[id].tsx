@@ -38,8 +38,11 @@ function DetalleTarjeta() {
     [tarjetaId, revision],
   );
   const diferidas = useMemo(() => comprasACuotas(tarjetaId), [tarjetaId, revision]);
+  // Los movimientos de ESTA tarjeta, filtrados en SQL. Antes se traian los 40
+  // ultimos de todo el historial y se filtraban en JS: con muchos movimientos
+  // al mes, una tarjeta con saldo podia aparecer sin ningun movimiento.
   const movimientos = useMemo(
-    () => listarMovimientos({ limite: 40 }).filter((m) => m.tarjetaId === tarjetaId),
+    () => listarMovimientos({ tarjetaIds: [tarjetaId], limite: 40 }),
     [tarjetaId, revision],
   );
 
