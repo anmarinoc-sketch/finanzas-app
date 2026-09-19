@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from 'react';
-import { FlatList, Pressable, TextInput, View } from 'react-native';
+import { FlatList, Pressable, RefreshControl, TextInput, View } from 'react-native';
 import { router, useFocusEffect, useLocalSearchParams } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -33,7 +33,7 @@ export default function Movimientos() {
   const t = useTema();
   const params = useLocalSearchParams<{ categoria?: string }>();
   const diaInicio = useAjustes((s) => s.diaInicioCiclo);
-  const { offset, mover } = usePeriodo();
+  const { offset, mover, ir } = usePeriodo();
   const { categoriasRaiz, revision, refrescar } = useDatos();
 
   const [texto, setTexto] = useState('');
@@ -45,6 +45,7 @@ export default function Movimientos() {
   const [todoElHistorial, setTodoElHistorial] = useState(false);
   const [limite, setLimite] = useState(PAGINA);
   const [hojaFiltros, setHojaFiltros] = useState(false);
+  const [refrescando, setRefrescando] = useState(false);
 
   useFocusEffect(useCallback(() => { refrescar(); }, [refrescar]));
 
@@ -138,13 +139,27 @@ export default function Movimientos() {
             </Texto>
           </Pressable>
         ) : (
-          <SelectorPeriodo
-            etiqueta={etiquetaCiclo(rango, diaInicio)}
-            onAnterior={() => { mover(-1); setLimite(PAGINA); }}
-            onSiguiente={() => { mover(1); setLimite(PAGINA); }}
-            siguienteActivo={offset < 0}
-            onPress={() => setTodoElHistorial(true)}
-          />
+          <>
+            <SelectorPeriodo
+              etiqueta={etiquetaCiclo(rango, diaInicio)}
+              onAnterior={() => { mover(-1); setLimite(PAGINA); }}
+              onSiguiente={() => { mover(1); setLimite(PAGINA); }}
+              siguienteActivo={offset < 0}
+              onPress={() => setTodoElHistorial(true)}
+            />
+            {offset < 0 ? (
+              <Pressable
+                onPress={() => { ir(0); setLimite(PAGINA); }}
+                accessibilityRole="button"
+                style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 6, paddingVertical: 4 }}
+              >
+                <Ionicons name="return-down-back-outline" size={14} color={t.ambar} />
+                <Texto variante="micro" color="ambar">
+                  Estás viendo un mes anterior · volver al mes actual
+                </Texto>
+              </Pressable>
+            ) : null}
+          </>
         )}
 
         <View style={{ flexDirection: 'row', gap: esp.sm }}>
@@ -156,6 +171,21 @@ export default function Movimientos() {
 
       <FlatList
         data={filas}
+        refreshControl={
+          <RefreshControl
+            refreshing={refrescando}
+            tintColor={t.acento}
+            colors={[t.acento]}
+            title="Actualizando…"
+            onRefresh={() => {
+              setRefrescando(true);
+              refrescar();
+              setLimite(PAGINA);
+              // Un instante de indicador: si no, el usuario no percibe que pasó algo.
+              setTimeout(() => setRefrescando(false), 350);
+            }}
+          />
+        }
         keyExtractor={(f, i) => (f.tipo === 'fecha' ? `f-${f.fecha}` : `m-${f.m.id}-${i}`)}
         contentContainerStyle={{ paddingHorizontal: esp.lg, paddingBottom: 120 }}
         showsVerticalScrollIndicator={false}

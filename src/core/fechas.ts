@@ -1,5 +1,5 @@
 import {
-  addDays, addMonths, differenceInCalendarDays, endOfDay, format,
+  addDays, addMonths, differenceInCalendarDays, differenceInCalendarMonths, endOfDay, format,
   getDaysInMonth, isAfter, isBefore, parseISO, startOfDay, subMonths,
 } from 'date-fns';
 import { es } from 'date-fns/locale';
@@ -69,4 +69,15 @@ export const dentroDe = (d: Date, r: Rango) => !isBefore(d, r.desde) && !isAfter
 export function ultimosCiclos(n: number, diaInicio: number, ref = new Date()): Rango[] {
   const actual = cicloDe(ref, diaInicio);
   return Array.from({ length: n }, (_, i) => moverCiclo(actual, i - (n - 1), diaInicio));
+}
+
+/**
+ * Cuántos ciclos hay que retroceder desde el ciclo vigente para llegar al
+ * que contiene `fecha`. Devuelve 0 para el ciclo actual y negativos para los
+ * anteriores, que es lo que espera el selector de periodo.
+ */
+export function offsetDeCiclo(fecha: Date, diaInicio: number, ahora = new Date()): number {
+  const actual = cicloDe(ahora, diaInicio);
+  const destino = cicloDe(fecha, diaInicio);
+  return Math.min(0, differenceInCalendarMonths(destino.desde, actual.desde));
 }

@@ -34,7 +34,7 @@ export default function Inicio() {
   const { width } = useWindowDimensions();
   const nombre = useAjustes((s) => s.nombre);
   const notificaciones = useAjustes((s) => s.notificaciones);
-  const { mover, offset } = usePeriodo();
+  const { mover, offset, ir } = usePeriodo();
   const { metas, tarjetas, revision, refrescar } = useDatos();
   const r = useResumen();
   const [refrescando, setRefrescando] = useState(false);
@@ -107,6 +107,21 @@ export default function Inicio() {
           onSiguiente={() => mover(1)}
           siguienteActivo={offset < 0}
         />
+        {offset < 0 ? (
+          <Pressable
+            onPress={() => ir(0)}
+            accessibilityRole="button"
+            style={{
+              flexDirection: 'row', alignItems: 'center', justifyContent: 'center',
+              gap: 6, backgroundColor: t.ambarFondo, borderRadius: radio.md, padding: esp.sm,
+            }}
+          >
+            <Ionicons name="alert-circle-outline" size={16} color={t.ambar} />
+            <Texto variante="micro" color="ambar">
+              Estás viendo {r.etiqueta}, no el mes actual · toca para volver
+            </Texto>
+          </Pressable>
+        ) : null}
 
         {/* Tarjeta principal: balance del ciclo */}
         <Tarjeta style={{ gap: esp.lg }}>

@@ -17,13 +17,20 @@ import { Chip } from '@/ui/comp/Chip';
 import { Hoja } from '@/ui/comp/Hoja';
 import { IconoCategoria } from '@/ui/comp/IconoCategoria';
 import { TecladoNumerico } from '@/ui/comp/TecladoNumerico';
+import { MontoEditable } from '@/ui/comp/MontoEditable';
 import { Segmentado } from '@/ui/comp/SelectorPeriodo';
 import { esp, radio } from '@/ui/tema';
 
-import { formatoCOP, separarMiles } from '@/core/dinero';
+import {
+  borrarDigito, cursorTrasDigitos, digitosAntesDelCursor,
+  formatoCOP, insertarDigitos, separarMiles,
+} from '@/core/dinero';
 import { cuotaMensual } from '@/core/cuotas';
 import { MEDIOS_PAGO } from '@/constantes/medios';
 import { useDatos, conRefresco } from '@/store/datos';
+import { useAjustes } from '@/store/ajustes';
+import { usePeriodo } from '@/store/periodo';
+import { offsetDeCiclo } from '@/core/fechas';
 import {
   actualizarTransaccion, borrarTransaccion, crearRecurrente, crearTransaccion,
   listarSubcategorias, obtenerTransaccion,
@@ -44,9 +51,12 @@ export default function Registro() {
   const params = useLocalSearchParams<{ id?: string; tipo?: string }>();
   const editandoId = params.id ? Number(params.id) : null;
   const { categoriasRaiz, categorias: todasLasCategorias, cuentas, tarjetas } = useDatos();
+  const diaInicioCiclo = useAjustes((s) => s.diaInicioCiclo);
 
   const [tipo, setTipo] = useState<TipoTransaccion>((params.tipo as TipoTransaccion) || 'gasto');
   const [digitos, setDigitos] = useState('');
+  // Posición del cursor dentro del texto formateado del monto.
+  const [cursor, setCursor] = useState(0);
   const [categoriaId, setCategoriaId] = useState<number | null>(null);
   const [subcategoriaId, setSubcategoriaId] = useState<number | null>(null);
   const [fecha, setFecha] = useState(new Date());
@@ -67,6 +77,29 @@ export default function Registro() {
   const [guardando, setGuardando] = useState(false);
 
   const monto = Number(digitos || '0');
+  const formateado = `$ ${separarMiles(monto)}`;
+
+  /**
+   * El teclado propio escribe y borra en la posición del cursor, no solo al
+   * final: así se puede tocar el número y corregir un dígito concreto.
+   */
+  const escribirDigitos = (nuevos: string) => {
+    const pos = digitosAntesDelCursor(formateado, cursor);
+    const siguiente = insertarDigitos(digitos, pos, nuevos);
+    setDigitos(siguiente);
+    const nuevoFormato = `$ ${separarMiles(Number(siguiente || '0'))}`;
+    setCursor(cursorTrasDigitos(nuevoFormato, pos + nuevos.length));
+  };
+
+  const borrarEnCursor = () => {
+    const pos = digitosAntesDelCursor(formateado, cursor);
+    const siguiente = borrarDigito(digitos, pos);
+    setDigitos(siguiente);
+    const nuevoFormato = `$ ${separarMiles(Number(siguiente || '0'))}`;
+    setCursor(cursorTrasDigitos(nuevoFormato, Math.max(0, pos - 1)));
+  };
+
+  const limpiarMonto = () => { setDigitos(''); setCursor(2); };
   const categoria = categoriasRaiz.find((c) => c.id === categoriaId);
   const subcategorias = useMemo(
     () => (categoriaId ? listarSubcategorias(categoriaId) : []),
@@ -83,6 +116,7 @@ export default function Registro() {
     if (!tx) return;
     setTipo(tx.tipo);
     setDigitos(String(tx.monto));
+    setCursor(`$ ${separarMiles(tx.monto)}`.length);
     setCategoriaId(tx.subcategoriaId ? null : tx.categoriaId);
     setSubcategoriaId(tx.subcategoriaId);
     setFecha(new Date(tx.fecha + 'T00:00:00'));
@@ -172,6 +206,10 @@ export default function Registro() {
         }
       });
 
+      // Si el usuario estaba viendo un mes anterior, se salta al ciclo del
+      // movimiento recién guardado. Si no, parece que no se registró nada.
+      usePeriodo.getState().ir(offsetDeCiclo(fecha, diaInicioCiclo));
+
       Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success).catch(() => {});
       router.back();
     } catch (e: any) {
@@ -222,19 +260,25 @@ export default function Registro() {
         />
       </View>
 
+      {/* Monto fijo: antes vivía dentro del ScrollView y al bajar a teclear
+          se salía de la pantalla, así que no se veía lo que se escribía. */}
+      <View style={{ alignItems: 'center', paddingTop: esp.md, paddingBottom: esp.sm }}>
+        <Texto variante="micro" color="tenue">MONTO · toca el número para corregir un dígito</Texto>
+        <MontoEditable
+          digitos={digitos}
+          cursor={cursor}
+          onCursor={setCursor}
+          color={colorMonto}
+          prefijo={tipo === 'ingreso' ? '+ ' : ''}
+        />
+      </View>
+
       <ScrollView
+        style={{ flex: 1 }}
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
         contentContainerStyle={{ padding: esp.lg, gap: esp.md }}
       >
-        {/* Monto: el elemento dominante de la pantalla */}
-        <View style={{ alignItems: 'center', paddingVertical: esp.md }}>
-          <Texto variante="micro" color="tenue">MONTO</Texto>
-          <Texto variante="montoHero" style={{ color: colorMonto, fontSize: digitos.length > 9 ? 30 : 40 }}>
-            {tipo === 'ingreso' ? '+ ' : ''}$ {separarMiles(monto)}
-          </Texto>
-        </View>
-
         {tipo !== 'transferencia' ? (
           <>
             <CampoSelector
@@ -415,12 +459,20 @@ export default function Registro() {
           </View>
         ) : null}
 
-        <TecladoNumerico
-          onTecla={(d) => setDigitos((p) => (p + d).replace(/^0+(?=\d)/, '').slice(0, 12))}
-          onBorrar={() => setDigitos((p) => p.slice(0, -1))}
-          onLimpiar={() => setDigitos('')}
-        />
+        <View style={{ height: esp.md }} />
+      </ScrollView>
 
+      {/* Teclado y guardar, fijos abajo: siempre al alcance del pulgar y sin
+          empujar el monto fuera de la pantalla. */}
+      <View style={{
+        paddingHorizontal: esp.lg, paddingTop: esp.sm, gap: esp.sm,
+        borderTopWidth: 1, borderTopColor: t.borde, backgroundColor: t.fondoElevado,
+      }}>
+        <TecladoNumerico
+          onTecla={escribirDigitos}
+          onBorrar={borrarEnCursor}
+          onLimpiar={limpiarMonto}
+        />
         <Boton
           titulo={editandoId ? 'Guardar cambios' : 'Registrar movimiento'}
           ancho
@@ -428,8 +480,7 @@ export default function Registro() {
           deshabilitado={monto <= 0}
           onPress={guardar}
         />
-        <View style={{ height: esp.xl }} />
-      </ScrollView>
+      </View>
 
       <Hoja visible={hojaCategoria} onCerrar={() => setHojaCategoria(false)} titulo="Elegir categoría" alto="70%">
         <Boton

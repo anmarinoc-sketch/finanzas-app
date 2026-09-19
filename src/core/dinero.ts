@@ -55,3 +55,49 @@ export function formatoPct(p: number, decimales = 0): string {
   if (!Number.isFinite(p)) return '0%';
   return `${p.toFixed(decimales).replace('.', ',')}%`;
 }
+
+/* ------------------------------------------------------------------ *
+ * Edición del monto con cursor
+ *
+ * El monto se muestra formateado ("1.250.000") pero por dentro son solo
+ * dígitos ("1250000"). Para poder tocar el número y borrar un dígito
+ * concreto hay que traducir entre la posición del cursor en el texto
+ * formateado y la posición en la cadena de dígitos.
+ * ------------------------------------------------------------------ */
+
+/** Dígitos que hay antes del cursor en el texto formateado. */
+export function digitosAntesDelCursor(formateado: string, cursor: number): number {
+  let n = 0;
+  for (let i = 0; i < Math.min(cursor, formateado.length); i++) {
+    if (formateado[i] >= '0' && formateado[i] <= '9') n++;
+  }
+  return n;
+}
+
+/** Posición del cursor que deja `cuantos` dígitos a su izquierda. */
+export function cursorTrasDigitos(formateado: string, cuantos: number): number {
+  if (cuantos <= 0) return 0;
+  let n = 0;
+  for (let i = 0; i < formateado.length; i++) {
+    if (formateado[i] >= '0' && formateado[i] <= '9') {
+      n++;
+      if (n === cuantos) return i + 1;
+    }
+  }
+  return formateado.length;
+}
+
+/** Inserta un dígito (o varios, como "000") en la posición indicada. */
+export function insertarDigitos(digitos: string, posicion: number, nuevos: string): string {
+  const p = Math.max(0, Math.min(posicion, digitos.length));
+  const resultado = digitos.slice(0, p) + nuevos + digitos.slice(p);
+  // Sin ceros a la izquierda, y con un techo razonable para un monto en pesos.
+  return resultado.replace(/^0+(?=\d)/, '').slice(0, 12);
+}
+
+/** Borra el dígito que está justo antes de la posición indicada. */
+export function borrarDigito(digitos: string, posicion: number): string {
+  const p = Math.max(0, Math.min(posicion, digitos.length));
+  if (p === 0) return digitos;
+  return digitos.slice(0, p - 1) + digitos.slice(p);
+}

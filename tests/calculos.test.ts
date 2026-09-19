@@ -5,7 +5,7 @@
  */
 import { addMonths, subMonths } from 'date-fns';
 import { formatoCOP, formatoCorto, parsearMonto, separarMiles } from '../src/core/dinero';
-import { anclarDia, cicloDe, progresoCiclo, ultimosCiclos } from '../src/core/fechas';
+import { anclarDia, cicloDe, offsetDeCiclo, progresoCiclo, ultimosCiclos } from '../src/core/fechas';
 import { aMensual, ingresoMensualEstimado, mensualDeIngreso } from '../src/core/ingresos';
 import { evaluarPresupuesto, fraseRitmo, nivelPorConsumo } from '../src/core/presupuesto';
 import { cuotaMensual, estadoCuotas, repartirCuotas } from '../src/core/cuotas';
@@ -348,5 +348,31 @@ describe('quincenas que no son iguales', () => {
       { monto: 900_000, frecuencia: 'mensual' },
       { monto: 500_000, frecuencia: 'ocasional' },
     ])).toBe(5_100_000);
+  });
+});
+
+describe('salto de periodo al guardar un movimiento', () => {
+  test('una fecha del ciclo actual no mueve el periodo', () => {
+    const hoy = new Date(2026, 8, 18);
+    expect(offsetDeCiclo(hoy, 1, hoy)).toBe(0);
+  });
+
+  test('una fecha de meses anteriores devuelve el desplazamiento correcto', () => {
+    const hoy = new Date(2026, 8, 18);
+    expect(offsetDeCiclo(new Date(2026, 7, 10), 1, hoy)).toBe(-1);
+    expect(offsetDeCiclo(new Date(2026, 5, 3), 1, hoy)).toBe(-3);
+  });
+
+  test('una fecha futura no manda el periodo hacia adelante', () => {
+    const hoy = new Date(2026, 8, 18);
+    expect(offsetDeCiclo(new Date(2026, 10, 1), 1, hoy)).toBe(0);
+  });
+
+  test('respeta un ciclo que no empieza el día 1', () => {
+    // Con corte el 15, el 10 de septiembre pertenece al ciclo que abrió el
+    // 15 de agosto: es el ciclo anterior, no el actual.
+    const hoy = new Date(2026, 8, 20);
+    expect(offsetDeCiclo(new Date(2026, 8, 10), 15, hoy)).toBe(-1);
+    expect(offsetDeCiclo(new Date(2026, 8, 20), 15, hoy)).toBe(0);
   });
 });

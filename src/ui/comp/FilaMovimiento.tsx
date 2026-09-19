@@ -62,6 +62,9 @@ export function FilaMovimiento({ m, onPress }: { m: MovimientoVista; onPress?: (
         <Texto variante="monto" style={{ color }}>{signo}{formatoCOP(m.monto)}</Texto>
         {m.fotoUri ? <Ionicons name="image-outline" size={12} color={t.textoTenue} /> : null}
       </View>
+
+      {/* Pista visible de que la fila se toca para editar o borrar. */}
+      {onPress ? <Ionicons name="chevron-forward" size={16} color={t.textoTenue} /> : null}
     </Pressable>
   );
 }
