@@ -187,16 +187,6 @@ principio de un componente, si los hooks van después, React lanza "rendered few
 than expected" en cuanto los datos aparecen: se cambia un fallo por otro. La guarda va
 siempre después de la última llamada a un hook. Lo revisa `npm run fronteras`.
 
-## Diagnóstico cuando la app se cierra
-
-`src/servicios/diagnostico.ts` cuenta los arranques que no llegan a estabilizarse. Al
-tercero, la app abre en **modo recuperación** (`src/ui/PantallaRecuperacion.tsx`): usa
-solo `View`, `Text` y `Pressable` a propósito, para poder dibujarse aunque falle el tema,
-los gráficos o las animaciones. Muestra el último error registrado por el manejador
-global y ofrece abrir sin notificaciones ni bloqueo, rehacer la configuración, restaurar
-la copia más reciente o borrar los datos. El borrado es la última opción y la única que
-borra; la pantalla lo dice explícitamente y muestra cuántos movimientos hay guardados.
-
 **13. Un total sumado en JavaScript sobre la página cargada.** El encabezado de
 Movimientos sumaba los gastos e ingresos de las filas que tenía en pantalla (60, la
 página), mientras el inicio los sumaba en SQL sobre todo el ciclo. Con más de 60
@@ -229,6 +219,17 @@ se pierde, solo cambia el orden. `topComercios` agrupa por esa misma etiqueta, p
 el gráfico no llame comercio a un medio de pago. Lección general: cuando la interfaz se
 ve mal, comprobar primero si el dato está bien y lo que falla es el orden en que se
 muestra.
+
+## Diagnóstico cuando la app se cierra
+
+`src/servicios/diagnostico.ts` cuenta los arranques que no llegan a estabilizarse. Al
+tercero, la app abre en **modo recuperación** (`src/ui/PantallaRecuperacion.tsx`): usa
+solo `View`, `Text` y `Pressable` a propósito, para poder dibujarse aunque falle el tema,
+los gráficos o las animaciones. Muestra el último error registrado por el manejador
+global y ofrece abrir sin notificaciones ni bloqueo, rehacer la configuración, restaurar
+la copia más reciente o borrar los datos. El borrado es la última opción y la única que
+borra; la pantalla lo dice explícitamente y muestra cuántos movimientos hay guardados.
+
 **Es la vía de diagnóstico principal.** Pedirle a Andrés una captura de esa pantalla
 resuelve en una iteración lo que de otro modo son horas de suposiciones.
 
