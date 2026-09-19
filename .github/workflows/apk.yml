@@ -18,15 +18,17 @@ permissions:
 jobs:
   apk:
     name: APK de Android
-    runs-on: ubuntu-latest
+    # Fijada a propósito: ubuntu-latest migra a Ubuntu 26 y un cambio de
+    # imagen no debe romper la compilación de una app en uso.
+    runs-on: ubuntu-24.04
     timeout-minutes: 45
 
     steps:
       - name: Descargar el código
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
 
       - name: Preparar Node
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v5
         with:
           # Node 24: la prueba de integración usa node:sqlite, que no existe
           # antes de la 22.5 y solo es estable a partir de la 24.
@@ -34,13 +36,26 @@ jobs:
           cache: npm
 
       - name: Preparar Java 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: 17
 
-      - name: Preparar el SDK de Android
-        uses: android-actions/setup-android@v3
+      - name: Comprobar el SDK de Android
+        # La imagen del runner ya trae el SDK. Antes se usaba
+        # android-actions/setup-android, que un día empezó a fallar y dejó sin
+        # APK a una app en uso. Mejor depender solo de la imagen y avisar
+        # claro si algún día deja de traerlo.
+        run: |
+          SDK="${ANDROID_SDK_ROOT:-$ANDROID_HOME}"
+          if [ -z "$SDK" ] || [ ! -d "$SDK" ]; then
+            echo "::error::La imagen del runner no trae el SDK de Android. Hay que instalarlo explícitamente."
+            exit 1
+          fi
+          echo "SDK de Android en $SDK"
+          echo "ANDROID_HOME=$SDK" >> "$GITHUB_ENV"
+          echo "ANDROID_SDK_ROOT=$SDK" >> "$GITHUB_ENV"
+          yes | "$SDK/cmdline-tools/latest/bin/sdkmanager" --licenses >/dev/null 2>&1 || true
 
       - name: Instalar dependencias
         run: npm ci
