@@ -14,8 +14,9 @@ import { Hoja } from '@/ui/comp/Hoja';
 import { TecladoNumerico } from '@/ui/comp/TecladoNumerico';
 import { esp } from '@/ui/tema';
 import { useAjustes } from '@/store/ajustes';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function Seguridad() {
+function Seguridad() {
   const t = useTema();
   const a = useAjustes();
   const [hoja, setHoja] = useState(false);
@@ -125,3 +126,6 @@ export default function Seguridad() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Seguridad, 'Seguridad');

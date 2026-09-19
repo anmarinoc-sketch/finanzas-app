@@ -1,7 +1,8 @@
-import { useMemo } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ScrollView, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { useFocusEffect } from 'expo-router';
 
 import { useTema } from '@/ui/TemaProvider';
 import { Encabezado } from '@/ui/comp/Encabezado';
@@ -17,9 +18,14 @@ import { gastoPorCategoria, totalCategoriaEnRango, totalesPeriodo } from '@/db/c
 import { useResumen } from '@/hooks/useResumen';
 import { useAjustes } from '@/store/ajustes';
 import { useDatos } from '@/store/datos';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function Insights() {
+function Insights() {
   const t = useTema();
+  // Refresco al entrar, como en el resto de pantallas: nunca mostrar cifras
+  // de antes del ultimo movimiento registrado.
+  const refrescar = useDatos((s) => s.refrescar);
+  useFocusEffect(useCallback(() => { refrescar(); }, [refrescar]));
   const diaInicio = useAjustes((s) => s.diaInicioCiclo);
   const { metas, revision } = useDatos();
   const r = useResumen();
@@ -113,3 +119,6 @@ export default function Insights() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Insights, 'Observaciones');

@@ -15,8 +15,8 @@ import { escribirBandera, guardarError, leerBandera } from './diagnostico';
  */
 
 const CARPETA = 'respaldos';
-const MAXIMO = 8;
-const HORAS_ENTRE_AUTOMATICOS = 20;
+const MAXIMO = 12;
+const HORAS_ENTRE_AUTOMATICOS = 10;
 
 function carpeta(): Directory {
   const d = new Directory(Paths.document, CARPETA);
@@ -92,8 +92,11 @@ export function restaurarRespaldo(uri: string): { registros: number } {
 }
 
 /**
- * Un respaldo al día, sin que el usuario tenga que acordarse. Se llama al
- * abrir la app, ya con el arranque estabilizado.
+ * Respaldo automatico al abrir la app, si han pasado 10 horas desde el ultimo.
+ * Con ese intervalo, un uso normal (manana y noche) deja dos copias al dia sin
+ * que el usuario tenga que acordarse de nada. Se llama desde el layout raiz,
+ * ya con el arranque estabilizado, no desde una pantalla: asi ocurre aunque
+ * entre directo a Movimientos y nunca pase por el inicio.
  */
 export function respaldoDiarioSiToca(): Respaldo | null {
   const ultimo = leerBandera('ultimo_respaldo_auto');

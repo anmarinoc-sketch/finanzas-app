@@ -20,6 +20,9 @@ const DIAS = ['L', 'M', 'M', 'J', 'V', 'S', 'D'];
 export function MapaCalor({ dias, ancho }: { dias: DiaCalor[]; ancho: number }) {
   const t = useTema();
   const [sel, setSel] = useState<DiaCalor | null>(null);
+  // Guarda de la regla general: nunca se le pasan colecciones vacias a la
+  // libreria de dibujo, y un grafico sin datos no se dibuja en vez de lanzar.
+  if (!dias.length) return null;
   const max = Math.max(1, ...dias.map((d) => d.total));
   const celda = Math.floor((ancho - 6 * 6) / 7);
 

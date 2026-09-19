@@ -17,8 +17,9 @@ import { useDatos, conRefresco } from '@/store/datos';
 import { crearCategoria, listarCategorias } from '@/db/crud';
 import { ICONOS_DISPONIBLES } from '@/constantes/categorias';
 import { COLORES_CATEGORIA } from '@/constantes/paleta';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function PasoCategorias() {
+function PasoCategorias() {
   const t = useTema();
   const revision = useDatos((s) => s.revision);
   // Incluye las archivadas: al rehacer la configuración deben poder reactivarse.
@@ -124,3 +125,6 @@ export default function PasoCategorias() {
     </PasoOnboarding>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(PasoCategorias, 'Categorías');

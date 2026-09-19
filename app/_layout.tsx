@@ -1,5 +1,5 @@
-import { useEffect, useState } from 'react';
-import { View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { AppState, View } from 'react-native';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
@@ -17,6 +17,7 @@ import {
   SEGUNDOS_ESTABLE, confirmarArranque, guardarError,
   instalarManejadorGlobal, registrarArranque,
 } from '@/servicios/diagnostico';
+import { respaldoDiarioSiToca } from '@/servicios/respaldoAuto';
 
 SplashScreen.preventAutoHideAsync().catch(() => {});
 
@@ -55,11 +56,30 @@ export default function LayoutRaiz() {
     }
   }, [cargar, refrescar]);
 
-  // Si la app sobrevive unos segundos, el arranque cuenta como bueno.
+  // Si la app sobrevive unos segundos, el arranque cuenta como bueno. Y ya con
+  // el arranque estabilizado se hace el respaldo automatico, si toca.
   useEffect(() => {
     if (estado !== 'listo') return;
-    const id = setTimeout(confirmarArranque, SEGUNDOS_ESTABLE * 1000);
+    const id = setTimeout(() => {
+      confirmarArranque();
+      try { respaldoDiarioSiToca(); } catch (e) { guardarError(e, 'respaldo automatico'); }
+    }, SEGUNDOS_ESTABLE * 1000);
     return () => clearTimeout(id);
+  }, [estado]);
+
+  // Volver del segundo plano tambien cuenta como abrir la app: si la deja
+  // abierta varios dias, el respaldo se sigue haciendo igual.
+  const estadoApp = useRef(AppState.currentState);
+  useEffect(() => {
+    if (estado !== 'listo') return;
+    const sub = AppState.addEventListener('change', (nuevo) => {
+      const volvio = estadoApp.current !== 'active' && nuevo === 'active';
+      estadoApp.current = nuevo;
+      if (volvio) {
+        try { respaldoDiarioSiToca(); } catch (e) { guardarError(e, 'respaldo al volver'); }
+      }
+    });
+    return () => sub.remove();
   }, [estado]);
 
   if (estado === 'cargando') return null;

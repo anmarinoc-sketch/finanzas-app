@@ -36,6 +36,7 @@ import {
   listarSubcategorias, obtenerTransaccion,
 } from '@/db/crud';
 import type { Frecuencia, MedioPago, TipoTransaccion } from '@/db/schema';
+import { conFrontera } from '@/ui/Frontera';
 
 const esMismoDia = (f: Date, delta: number) => isSameDay(f, addDays(new Date(), delta));
 
@@ -46,7 +47,7 @@ const FRECUENCIAS: { id: Frecuencia; texto: string }[] = [
   { id: 'anual', texto: 'Anual' },
 ];
 
-export default function Registro() {
+function Registro() {
   const t = useTema();
   const params = useLocalSearchParams<{ id?: string; tipo?: string }>();
   const editandoId = params.id ? Number(params.id) : null;
@@ -523,3 +524,6 @@ export default function Registro() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Registro, 'El registro');

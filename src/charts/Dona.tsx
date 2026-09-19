@@ -21,6 +21,9 @@ export function Dona({
   const t = useTema();
   const [foco, setFoco] = useState<number | null>(null);
   const total = items.reduce((a, i) => a + i.total, 0);
+  // Sin items, o con todo en cero, la libreria divide entre cero al repartir
+  // los angulos. Mejor no dibujar que lanzar.
+  if (!items.length || total <= 0) return null;
 
   const seleccionar = (idx: number | null) => {
     setFoco(idx);

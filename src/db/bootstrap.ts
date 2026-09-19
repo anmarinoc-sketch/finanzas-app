@@ -1,4 +1,5 @@
 import { bdNativa } from './cliente';
+import { copiarArchivoBd } from '@/servicios/copiaBd';
 
 /**
  * Migraciones. Cada entrada es una version; se aplican en orden las que
@@ -208,6 +209,17 @@ export function migrar(): number {
   const fila = bdNativa.getFirstSync<{ user_version: number }>('PRAGMA user_version');
   let version = fila?.user_version ?? 0;
 
+  // Antes de tocar el esquema, copia en bruto de la base. Es la unica copia que
+  // sigue sirviendo si una migracion deja el esquema a medias, porque no
+  // necesita leer los datos para hacerse. Solo cuando hay algo que migrar: en
+  // un arranque normal esto no cuesta nada.
+  if (version < MIGRACIONES.length && version > 0) {
+    // Con WAL, los cambios recientes viven en el archivo -wal; sin este
+    // checkpoint la copia del .db saldria incompleta.
+    try { bdNativa.execSync('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* da igual */ }
+    copiarArchivoBd(`antes-de-v${version + 1}`);
+  }
+
   for (let i = version; i < MIGRACIONES.length; i++) {
     // Cada migracion y su numero de version se guardan JUNTOS, en una sola
     // transaccion. Antes eran dos escrituras separadas: si la app moria entre
@@ -225,8 +237,18 @@ export function migrar(): number {
   return version;
 }
 
+/** Checkpoint del WAL y copia en bruto. Nunca lanza. */
+function copiaDeSeguridadDeArchivo(etiqueta: string) {
+  try { bdNativa.execSync('PRAGMA wal_checkpoint(TRUNCATE)'); } catch { /* da igual */ }
+  copiarArchivoBd(etiqueta);
+}
+
 /** Borra todo el contenido sin tocar el esquema (usado por "empezar de cero"). */
 export function vaciarDatos() {
+  // Copia en bruto antes de borrar. La copia en JSON puede no salir si el
+  // esquema esta danado, que es justo cuando se llega hasta aqui; esta sale
+  // siempre porque solo copia bytes.
+  copiaDeSeguridadDeArchivo('antes-de-vaciar');
   bdNativa.execSync(`
     DELETE FROM transacciones; DELETE FROM aportes_meta; DELETE FROM metas;
     DELETE FROM recurrentes; DELETE FROM deudas; DELETE FROM tarjetas;
@@ -238,6 +260,7 @@ export function vaciarDatos() {
 
 /** Borra solo los movimientos de ejemplo, conservando la configuracion. */
 export function borrarMovimientos() {
+  copiaDeSeguridadDeArchivo('antes-de-borrar-movimientos');
   bdNativa.execSync(`
     DELETE FROM transacciones; DELETE FROM aportes_meta;
     UPDATE metas SET monto_actual = 0, estado = 'en_curso';

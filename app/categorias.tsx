@@ -24,8 +24,9 @@ import {
 } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
 import type { Categoria } from '@/db/schema';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function Categorias() {
+function Categorias() {
   const t = useTema();
   const { categoriasRaiz, bolsillos, revision, refrescar } = useDatos();
   const [editando, setEditando] = useState<Categoria | null>(null);
@@ -284,3 +285,6 @@ function HojaCategoria({
     </Hoja>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Categorias, 'Categorías');

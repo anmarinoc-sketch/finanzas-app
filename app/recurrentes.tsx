@@ -24,8 +24,9 @@ import {
 } from '@/db/crud';
 import { useDatos, conRefresco, categoriaPorId } from '@/store/datos';
 import { recordarRecurrente } from '@/servicios/notificaciones';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function Recurrentes() {
+function Recurrentes() {
   const t = useTema();
   const { recurrentes, revision, refrescar } = useDatos();
   const [filtro, setFiltro] = useState<'todos' | 'suscripciones'>('todos');
@@ -188,3 +189,6 @@ export default function Recurrentes() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Recurrentes, 'Recurrentes');

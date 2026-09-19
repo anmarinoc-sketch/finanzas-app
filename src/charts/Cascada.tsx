@@ -23,6 +23,9 @@ export type PasoCascada = {
 export function Cascada({ pasos, ancho, alto = 230 }: { pasos: PasoCascada[]; ancho: number; alto?: number }) {
   const t = useTema();
   const [sel, setSel] = useState<number | null>(null);
+  // Guarda de la regla general: nunca se le pasan colecciones vacias a la
+  // libreria de dibujo, y un grafico sin datos no se dibuja en vez de lanzar.
+  if (!pasos.length) return null;
 
   const margenIzq = 0;
   const margenInf = 46;

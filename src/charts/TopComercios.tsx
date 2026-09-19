@@ -11,6 +11,9 @@ export type ItemTop = { descripcion: string; total: number; veces: number; color
 /** Top 10 de comercios: barra proporcional al mayor, no al total. */
 export function TopComercios({ items }: { items: ItemTop[] }) {
   const t = useTema();
+  // Guarda de la regla general: nunca se le pasan colecciones vacias a la
+  // libreria de dibujo, y un grafico sin datos no se dibuja en vez de lanzar.
+  if (!items.length) return null;
   const max = Math.max(1, ...items.map((i) => i.total));
   return (
     <View style={{ gap: esp.md }}>

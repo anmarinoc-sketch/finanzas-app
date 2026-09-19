@@ -21,8 +21,9 @@ import { COLORES_BOLSILLO } from '@/constantes/paleta';
 import { borrarBolsillo, guardarDistribucion } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
 import type { Bolsillo } from '@/db/schema';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function AjustesBolsillos() {
+function AjustesBolsillos() {
   const t = useTema();
   const { bolsillos, ingresoMensual, refrescar, revision } = useDatos();
   const [lista, setLista] = useState<Bolsillo[]>([]);
@@ -202,3 +203,6 @@ function aplicarPlantilla(lista: Bolsillo[], valores: number[]): Bolsillo[] {
     return { ...b, porcentaje: i >= 0 ? valores[i] ?? 0 : 0 };
   });
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(AjustesBolsillos, 'Bolsillos');

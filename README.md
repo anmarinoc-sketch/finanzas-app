@@ -151,9 +151,17 @@ Antes de dar por bueno cualquier cambio:
 npm run verificar
 ```
 
-Eso revisa los tipos, comprueba que no haya rutas duplicadas de expo-router y corre las
-68 pruebas: lógica financiera, capa de datos contra SQLite real, integridad del dinero y
-dependencias en tiempo de ejecución. Es lo mismo que corre la CI antes de compilar.
+Eso revisa los tipos, comprueba que no haya rutas duplicadas de expo-router, que ninguna
+pantalla quede bajo las barras del sistema, que todas tengan frontera de error, y corre
+las 109 pruebas: lógica financiera, capa de datos contra SQLite real, integridad del
+dinero, recuperación ante fallos y dependencias en tiempo de ejecución. Es lo mismo que
+corre la CI antes de compilar.
+
+Cada comprobación por separado, si hace falta:
+
+```bash
+npm run rutas && npm run areas && npm run fronteras && npm test
+```
 
 ---
 

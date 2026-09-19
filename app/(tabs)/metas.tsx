@@ -18,8 +18,9 @@ import { esp, radio } from '@/ui/tema';
 import { formatoCOP } from '@/core/dinero';
 import { cabeEnAhorro, calcularMeta, ESTADO_META_COLOR, ESTADO_META_TEXTO } from '@/core/metas';
 import { useDatos } from '@/store/datos';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function Metas() {
+function Metas() {
   const t = useTema();
   const { metas, bolsillos, ingresoMensual, refrescar, revision } = useDatos();
 
@@ -167,3 +168,6 @@ export default function Metas() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Metas, 'Metas');

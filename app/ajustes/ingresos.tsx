@@ -21,6 +21,7 @@ import { mensualDeIngreso } from '@/core/ingresos';
 import { actualizarIngreso, borrarIngreso, crearIngreso } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
 import type { Frecuencia } from '@/db/schema';
+import { conFrontera } from '@/ui/Frontera';
 
 const FRECUENCIAS: { id: Frecuencia; texto: string }[] = [
   { id: 'mensual', texto: 'Mensual' },
@@ -31,7 +32,7 @@ const FRECUENCIAS: { id: Frecuencia; texto: string }[] = [
   { id: 'ocasional', texto: 'Variable / ocasional' },
 ];
 
-export default function AjustesIngresos() {
+function AjustesIngresos() {
   const t = useTema();
   const { ingresos, ingresoMensual, refrescar } = useDatos();
   const [hoja, setHoja] = useState(false);
@@ -146,3 +147,6 @@ export default function AjustesIngresos() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(AjustesIngresos, 'Ingresos');

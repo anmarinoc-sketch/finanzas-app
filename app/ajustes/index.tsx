@@ -18,10 +18,11 @@ import { useOnboarding } from '@/store/onboarding';
 import { listarBolsillos, listarCategorias, listarIngresos } from '@/db/crud';
 import { useDatos } from '@/store/datos';
 import { cancelarTodas, pedirPermisoNotificaciones, programarResumenSemanal } from '@/servicios/notificaciones';
+import { conFrontera } from '@/ui/Frontera';
 
 const DIAS_CICLO = [1, 5, 10, 15, 20, 25, 30];
 
-export default function Ajustes() {
+function Ajustes() {
   const t = useTema();
   const a = useAjustes();
   const { ingresoMensual, categorias } = useDatos();
@@ -195,3 +196,6 @@ function Opcion({
     </Pressable>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Ajustes, 'Ajustes');

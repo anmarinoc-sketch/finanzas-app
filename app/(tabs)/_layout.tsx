@@ -5,6 +5,7 @@ import * as Haptics from 'expo-haptics';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTema } from '@/ui/TemaProvider';
 import { useAjustes } from '@/store/ajustes';
+import { conFrontera } from '@/ui/Frontera';
 
 /** Boton central (+) del tab bar: abre el registro rapido como modal. */
 function BotonCentral() {
@@ -32,7 +33,7 @@ function BotonCentral() {
   );
 }
 
-export default function LayoutTabs() {
+function LayoutTabs() {
   const t = useTema();
   const { cargado, onboardingCompleto, pinActivo, biometria, desbloqueado } = useAjustes();
   // La app dibuja bajo las barras del sistema (edgeToEdgeEnabled). Sin sumar
@@ -104,3 +105,6 @@ export default function LayoutTabs() {
     </Tabs>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(LayoutTabs, 'La navegación');

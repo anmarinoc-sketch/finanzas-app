@@ -23,8 +23,9 @@ import { formatoCOP, parsearMonto, separarMiles } from '@/core/dinero';
 import { calcularMeta, ESTADO_META_COLOR, ESTADO_META_TEXTO } from '@/core/metas';
 import { borrarAporte, borrarMeta, listarAportes, obtenerMeta, registrarAporte } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function DetalleMeta() {
+function DetalleMeta() {
   const t = useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const metaId = Number(id);
@@ -219,3 +220,6 @@ function Fila({ etiqueta, valor, destacado }: { etiqueta: string; valor: string;
     </View>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(DetalleMeta, 'La meta');

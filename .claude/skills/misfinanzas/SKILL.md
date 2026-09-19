@@ -42,7 +42,8 @@ compilación: hay `paths-ignore: ['**.md']` y se puede añadir `[skip ci]` al co
 npm run verificar
 ```
 
-   Revisa tipos, rutas duplicadas y las 68 pruebas. Es exactamente lo que corre la CI.
+   Revisa tipos, rutas duplicadas, áreas seguras, fronteras de error y las 109
+   pruebas. Es exactamente lo que corre la CI.
    Para cambios que tocan dependencias o configuración nativa, además:
 
 ```bash
@@ -74,6 +75,7 @@ teléfono. Por eso existe el modo recuperación.
 | Categorías o medios de pago precargados | `src/constantes/` |
 | Pasos del onboarding | `app/onboarding/` + el borrador en `src/store/onboarding.ts` |
 | Exportar, PDF, copia de seguridad | `src/servicios/` |
+| Que una pantalla nueva no pueda tumbar la app | `export default conFrontera(X, 'Nombre')` al final del archivo |
 | Datos de ejemplo | `src/db/seed.ts` |
 | Permisos, ícono, nombre, versión | `app.json` (y `scripts/generar-assets.mjs` para la marca) |
 
@@ -168,17 +170,39 @@ vacíos, y poner un `return null` de guarda en cada componente de gráfico.
 → borrar. Y en el paso 1 había que pulsar "Agregar" antes de "Continuar". Si una acción
 razonable necesita dos pasos no obvios, para el usuario simplemente no existe.
 
+**11. Un fallo de dibujo tumbaba la app entera.** La trampa 9 fue el bug; esta es la
+razón de que costara tanto. React Native, sin frontera de error, propaga cualquier fallo
+de render hasta la raíz: un array vacío en un gráfico cerraba toda la app, no solo ese
+gráfico. Y como el detector de bucles cuenta arranques que no se estabilizan, tres
+cierres llevaban al modo recuperación y ahí el borrado parecía la salida. Ahora
+`src/ui/Frontera.tsx` envuelve **cada pantalla** (vía `conFrontera` en el `export
+default`) y **cada gráfico** (dentro de `Grafico`, en `src/charts/Contenedor.tsx`). Un
+fallo se queda en su tarjeta, se registra con `registrarFalloDePantalla` y —clave— marca
+el arranque como bueno, para que un fallo atrapado no empuje nunca hacia recuperación. Lo
+cubren `npm run fronteras` (que además exige que la guarda de datos vacíos de cada gráfico
+vaya DESPUÉS de los hooks) y `tests/recuperacion.test.ts`.
+
+**12. Una guarda antes de los hooks.** Al añadir `if (!datos.length) return null;` al
+principio de un componente, si los hooks van después, React lanza "rendered fewer hooks
+than expected" en cuanto los datos aparecen: se cambia un fallo por otro. La guarda va
+siempre después de la última llamada a un hook. Lo revisa `npm run fronteras`.
+
 ## Diagnóstico cuando la app se cierra
 
 `src/servicios/diagnostico.ts` cuenta los arranques que no llegan a estabilizarse. Al
 tercero, la app abre en **modo recuperación** (`src/ui/PantallaRecuperacion.tsx`): usa
 solo `View`, `Text` y `Pressable` a propósito, para poder dibujarse aunque falle el tema,
 los gráficos o las animaciones. Muestra el último error registrado por el manejador
-global y ofrece abrir sin notificaciones ni bloqueo, rehacer la configuración o borrar
-los datos.
+global y ofrece abrir sin notificaciones ni bloqueo, rehacer la configuración, restaurar
+la copia más reciente o borrar los datos. El borrado es la última opción y la única que
+borra; la pantalla lo dice explícitamente y muestra cuántos movimientos hay guardados.
 
 **Es la vía de diagnóstico principal.** Pedirle a Andrés una captura de esa pantalla
 resuelve en una iteración lo que de otro modo son horas de suposiciones.
+
+Con las fronteras de error (trampa 11) este modo debería ser raro: solo lo alcanza un
+fallo en el arranque mismo, antes de que haya pantallas. Un fallo dentro de una pantalla
+ya no cuenta como arranque fallido.
 
 ## Que no se pierda un peso
 
@@ -194,6 +218,31 @@ en el historial, en vez de tocar el saldo inicial por debajo. Mantener ese crite
 
 Ojo al comparar con el extracto: el pago de la tarjeta se registra como **transferencia**,
 no como gasto. El gasto ya se contó en la compra.
+
+### Las cuatro capas de respaldo
+
+Ninguna acción destructiva ocurre sin dejar antes una copia. De más frecuente a más
+profunda:
+
+1. **Copia JSON automática** al abrir la app, si pasaron 10 horas de la anterior
+   (`respaldoDiarioSiToca`, llamada desde `app/_layout.tsx` y al volver del segundo
+   plano). Se conservan 12, en `Paths.document/respaldos`, que un DELETE de la base no
+   toca y Android no vacía como haría con la caché.
+2. **Copia JSON antes de cada acción destructiva**: borrar movimientos, empezar de cero,
+   restaurar otra copia, o el borrado del modo recuperación.
+3. **Copia en bruto del archivo `.db`** (`src/servicios/copiaBd.ts`) antes de aplicar
+   migraciones y antes de cualquier borrado. Es la única que sigue sirviendo si el
+   esquema quedó a medias, porque no necesita leer los datos: copia bytes. Antes de
+   copiar hace `PRAGMA wal_checkpoint(TRUNCATE)`, porque con WAL lo reciente vive en el
+   archivo `-wal`.
+4. **Copia que el usuario se lleva fuera del teléfono** (Ajustes › Datos › Copia de
+   seguridad). Las tres anteriores están en el mismo teléfono: si se pierde, se van con
+   él. Por eso la app lleva la cuenta de cuándo fue la última y lo recuerda al pasar
+   30 días.
+
+Al añadir cualquier acción que borre o reemplace datos, engancharla a la capa 2 o 3.
+Es una regla, no una sugerencia: la pérdida de datos real ocurrió por un borrado que no
+tenía copia previa.
 
 ## Qué queda pendiente
 

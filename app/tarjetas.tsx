@@ -20,8 +20,9 @@ import { cuotaFrancesa, diasParaPago, eaAEm, mesesRestantes, nivelEndeudamiento 
 import { COLORES_CATEGORIA } from '@/constantes/paleta';
 import { crearDeuda, crearTarjeta, borrarDeuda, comprasACuotas, cargaCuotasDelMes, saldosTarjeta } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function Tarjetas() {
+function Tarjetas() {
   const t = useTema();
   const { tarjetas, deudas, ingresoMensual, revision, refrescar } = useDatos();
   const [hoja, setHoja] = useState<'tarjeta' | 'deuda' | null>(null);
@@ -352,3 +353,6 @@ function HojaDeuda({ visible, onCerrar }: { visible: boolean; onCerrar: () => vo
     </Hoja>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Tarjetas, 'Tarjetas');

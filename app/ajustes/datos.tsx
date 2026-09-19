@@ -22,16 +22,28 @@ import { hayDatos, sembrarCatalogos, sembrarEjemplo } from '@/db/seed';
 import { contarMovimientos } from '@/db/crud';
 import { rangoActual } from '@/store/periodo';
 import { crearRespaldo, listarRespaldos, restaurarRespaldo } from '@/servicios/respaldoAuto';
+import { escribirBandera, leerBandera } from '@/servicios/diagnostico';
 import { useAjustes } from '@/store/ajustes';
 import { useDatos } from '@/store/datos';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function Datos() {
+function Datos() {
   const t = useTema();
   const diaInicio = useAjustes((s) => s.diaInicioCiclo);
   const cargarAjustes = useAjustes((s) => s.cargar);
   const { ingresoMensual, refrescar, revision } = useDatos();
   const [ocupado, setOcupado] = useState<string | null>(null);
   const [respaldos, setRespaldos] = useState(() => listarRespaldos());
+  // Las copias automaticas viven en el mismo telefono: si se pierde o se
+  // rompe, se van con el. Por eso se lleva aparte la cuenta de la ultima copia
+  // que el usuario guardo fuera, y se le recuerda.
+  const [copiaExterna, setCopiaExterna] = useState<number | null>(() => {
+    const v = leerBandera('ultima_copia_externa');
+    return v ? Number(v) : null;
+  });
+  const diasExterna = copiaExterna
+    ? Math.floor((Date.now() - copiaExterna) / 86_400_000)
+    : null;
 
   // Se recalcula con cada revisión: así la lista refleja las copias nuevas.
   useEffect(() => { setRespaldos(listarRespaldos()); }, [revision]);
@@ -147,11 +159,19 @@ Se guardó una copia con ${copia.registros} registros: se puede restaurar más a
         <Bloque
           icono="cloud-download-outline"
           titulo="Copia de seguridad"
-          texto="Un archivo JSON con absolutamente todo. Guárdalo en Drive o WhatsApp para no perder tus datos si cambias de teléfono."
+          texto={
+            diasExterna === null
+              ? 'Un archivo JSON con absolutamente todo. Guárdalo en Drive o WhatsApp: es la única copia que sobrevive si pierdes el teléfono. Todavía no has guardado ninguna fuera.'
+              : diasExterna >= 30
+                ? `Hace ${diasExterna} días que no guardas una copia fuera del teléfono. Conviene hacerlo de nuevo: las copias automáticas están dentro del mismo teléfono.`
+                : `Última copia guardada fuera del teléfono: hace ${diasExterna === 0 ? 'menos de un día' : `${diasExterna} día${diasExterna === 1 ? '' : 's'}`}. Guárdala en Drive o WhatsApp.`
+          }
           boton="Crear copia"
           cargando={ocupado === 'backup'}
           onPress={() => correr('backup', async () => {
             const r = await exportarBackup();
+            escribirBandera('ultima_copia_externa', String(Date.now()));
+            setCopiaExterna(Date.now());
             Alert.alert('Copia creada', `${r.registros} registros guardados en ${r.nombre}.`);
           })}
         />
@@ -176,8 +196,9 @@ Se guardó una copia con ${copia.registros} registros: se puede restaurar más a
             <Texto variante="seccion" style={{ flex: 1 }}>Copias automáticas</Texto>
           </View>
           <Texto variante="micro" color="suave" style={{ lineHeight: 18 }}>
-            La app guarda una copia al día dentro del teléfono, y otra justo antes de
-            cualquier borrado. Se conservan las 8 más recientes.
+            La app guarda una copia cada vez que la abres, si han pasado 10 horas desde
+            la anterior, y otra justo antes de cualquier borrado o cambio de esquema. Se
+            conservan las 12 más recientes.
           </Texto>
 
           {respaldos.length === 0 ? (
@@ -286,3 +307,6 @@ function Bloque({
     </Tarjeta>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Datos, 'Datos y copias');

@@ -36,6 +36,7 @@ import { MEDIOS_PAGO } from '@/constantes/medios';
 import { useResumen, acumuladoDiario } from '@/hooks/useResumen';
 import { useAjustes } from '@/store/ajustes';
 import { useDatos } from '@/store/datos';
+import { conFrontera } from '@/ui/Frontera';
 
 type Alcance = 'ciclo' | '3m' | '6m' | '12m' | 'anio';
 
@@ -47,7 +48,7 @@ const ALCANCES: { id: Alcance; texto: string }[] = [
   { id: 'anio', texto: 'Año' },
 ];
 
-export default function Analisis() {
+function Analisis() {
   const t = useTema();
   const { width } = useWindowDimensions();
   const ancho = width - esp.lg * 2;
@@ -347,3 +348,6 @@ export default function Analisis() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Analisis, 'Análisis');

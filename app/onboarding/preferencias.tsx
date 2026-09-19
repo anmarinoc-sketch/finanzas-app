@@ -18,10 +18,11 @@ import { useAjustes } from '@/store/ajustes';
 import { useDatos } from '@/store/datos';
 import { archivarCategoria, guardarDistribucion, listarCategorias, reemplazarIngresos } from '@/db/crud';
 import { format } from 'date-fns';
+import { conFrontera } from '@/ui/Frontera';
 
 const DIAS_CICLO = [1, 5, 10, 15, 20, 25, 30];
 
-export default function PasoPreferencias() {
+function PasoPreferencias() {
   const t = useTema();
   const ob = useOnboarding();
   const aplicar = useAjustes((s) => s.aplicar);
@@ -149,3 +150,6 @@ export default function PasoPreferencias() {
     </PasoOnboarding>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(PasoPreferencias, 'Preferencias');

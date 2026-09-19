@@ -62,6 +62,20 @@ export function guardarError(e: unknown, contexto: string, fatal = false) {
   escribir('ultimo_error', JSON.stringify(registro));
 }
 
+/**
+ * Un fallo de render que la frontera de error ya atrapo.
+ *
+ * Se registra para poder diagnosticarlo, pero ademas se marca el arranque como
+ * bueno: la app sigue abierta y el usuario tiene el control, asi que esto no
+ * debe empujar hacia el modo recuperacion. Sin esta linea, tres visitas a una
+ * pantalla rota acababan ofreciendo borrar los datos, que es exactamente como
+ * se perdio informacion una vez.
+ */
+export function registrarFalloDePantalla(e: unknown, etiqueta: string) {
+  guardarError(e, `pantalla: ${etiqueta}`);
+  confirmarArranque();
+}
+
 export function leerUltimoError(): ErrorRegistrado | null {
   const crudo = leer('ultimo_error');
   if (!crudo) return null;

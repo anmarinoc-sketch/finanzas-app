@@ -19,6 +19,7 @@ import { useAjustes } from '@/store/ajustes';
 import { useDatos } from '@/store/datos';
 import { contarMovimientos } from '@/db/crud';
 import type { Frecuencia } from '@/db/schema';
+import { conFrontera } from '@/ui/Frontera';
 
 const FRECUENCIAS: { id: Frecuencia; texto: string }[] = [
   { id: 'mensual', texto: 'Mensual' },
@@ -27,7 +28,7 @@ const FRECUENCIAS: { id: Frecuencia; texto: string }[] = [
   { id: 'ocasional', texto: 'Variable / ocasional' },
 ];
 
-export default function PasoIngresos() {
+function PasoIngresos() {
   const t = useTema();
   const { ingresos, agregarIngreso, quitarIngreso, nombre, set } = useOnboarding();
   const aplicar = useAjustes((s) => s.aplicar);
@@ -248,3 +249,6 @@ export default function PasoIngresos() {
     </PasoOnboarding>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(PasoIngresos, 'Ingresos');

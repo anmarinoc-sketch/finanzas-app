@@ -6,7 +6,7 @@ import { confirmarArranque, leerUltimoError, limpiarError } from '@/servicios/di
 import { migrar, vaciarDatos } from '@/db/bootstrap';
 import { sembrarCatalogos } from '@/db/seed';
 import { contarMovimientos, guardarUsuario, obtenerUsuario } from '@/db/crud';
-import { crearRespaldo } from '@/servicios/respaldoAuto';
+import { crearRespaldo, listarRespaldos, restaurarRespaldo } from '@/servicios/respaldoAuto';
 
 /**
  * Modo recuperación. Se muestra cuando la app se cerró dos veces seguidas
@@ -20,6 +20,9 @@ export function PantallaRecuperacion({ onContinuar }: { onContinuar: () => void 
   // entre opciones que conservan y opciones que borran.
   const [movimientos] = useState(() => { try { return contarMovimientos(); } catch { return 0; } });
   const [copiado, setCopiado] = useState(false);
+  // Las copias hay que ofrecerlas aqui, no solo en Ajustes: si la app no abre,
+  // Ajustes no se puede alcanzar.
+  const [copias] = useState(() => { try { return listarRespaldos(); } catch { return []; } });
 
   const detalle = error
     ? `${error.mensaje}\n\nContexto: ${error.contexto}\nFecha: ${error.fecha}\n\n${error.pila}`
@@ -40,7 +43,34 @@ export function PantallaRecuperacion({ onContinuar }: { onContinuar: () => void 
     if (obtenerUsuario()) guardarUsuario({ onboardingCompleto: 0 });
   });
 
-const borrarTodo = () => {
+  const restaurarUltima = () => {
+    const c = copias[0];
+    if (!c) return;
+    Alert.alert(
+      'Restaurar la copia más reciente',
+      `Copia del ${c.fecha.toLocaleString('es-CO')} con ${c.registros} registros. Reemplaza lo que haya ahora. Antes se guarda otra copia del estado actual.
+
+¿Restaurar?`,
+      [
+        { text: 'Cancelar', style: 'cancel' },
+        {
+          text: 'Restaurar',
+          onPress: () => {
+            try {
+              const r = restaurarRespaldo(c.uri);
+              Alert.alert('Listo', `Se restauraron ${r.registros} registros.`, [
+                { text: 'Abrir la app', onPress: () => salir(() => {}) },
+              ]);
+            } catch (e) {
+              Alert.alert('No se pudo restaurar', String((e as any)?.message ?? e));
+            }
+          },
+        },
+      ],
+    );
+  };
+
+  const borrarTodo = () => {
     // Copia primero. Una pérdida de datos real salió de ofrecer este botón
     // sin respaldo previo, a alguien que solo quería recuperar su app.
     const copia = crearRespaldo('antes-de-borrar');
@@ -100,7 +130,7 @@ const borrarTodo = () => {
               Tienes {movimientos} movimientos guardados
             </Text>
             <Text style={{ color: '#A7AEBF', fontSize: 13, lineHeight: 19 }}>
-              Siguen ahí. Las tres primeras opciones de abajo NO los borran. Solo la última.
+              Siguen ahí. La única opción que borra algo es la última, la roja.
             </Text>
           </View>
         ) : null}
@@ -120,6 +150,13 @@ const borrarTodo = () => {
           texto="Repite los 4 pasos. Tus movimientos NO se borran: seguirán ahí al terminar."
           onPress={rehacerConfiguracion}
         />
+        {copias.length > 0 ? (
+          <Opcion
+            titulo="Restaurar la copia más reciente"
+            texto={`Del ${copias[0].fecha.toLocaleDateString('es-CO')}, con ${copias[0].registros} registros. Hay ${copias.length} copias guardadas en el teléfono.`}
+            onPress={restaurarUltima}
+          />
+        ) : null}
         <Opcion
           titulo="Borrar todos los datos"
           texto="La única opción que borra. Deja la app como recién instalada. Se guarda una copia antes, por si acaso."

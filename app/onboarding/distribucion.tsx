@@ -20,8 +20,9 @@ import { COLORES_BOLSILLO } from '@/constantes/paleta';
 import { useOnboarding } from '@/store/onboarding';
 import { conRefresco } from '@/store/datos';
 import { borrarBolsillo, listarBolsillos } from '@/db/crud';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function PasoDistribucion() {
+function PasoDistribucion() {
   const t = useTema();
   const { ingresos, bolsillos, setBolsillos, aplicarPlantilla } = useOnboarding();
   const [hoja, setHoja] = useState(false);
@@ -199,3 +200,6 @@ export default function PasoDistribucion() {
     </PasoOnboarding>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(PasoDistribucion, 'Distribución');

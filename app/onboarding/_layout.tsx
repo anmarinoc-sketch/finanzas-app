@@ -1,7 +1,8 @@
 import { Stack } from 'expo-router';
 import { useTema } from '@/ui/TemaProvider';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function LayoutOnboarding() {
+function LayoutOnboarding() {
   const t = useTema();
   return (
     <Stack screenOptions={{ headerShown: false, contentStyle: { backgroundColor: t.fondo } }}>
@@ -12,3 +13,6 @@ export default function LayoutOnboarding() {
     </Stack>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(LayoutOnboarding, 'La configuración inicial');

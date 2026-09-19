@@ -21,6 +21,7 @@ import { calcularMeta, cabeEnAhorro } from '@/core/metas';
 import { COLORES_CATEGORIA } from '@/constantes/paleta';
 import { crearMeta } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
+import { conFrontera } from '@/ui/Frontera';
 
 export const ICONOS_META = [
   'flag-outline', 'umbrella-outline', 'airplane-outline', 'home-outline', 'car-sport-outline',
@@ -28,7 +29,7 @@ export const ICONOS_META = [
   'trophy-outline', 'boat-outline',
 ];
 
-export default function NuevaMeta() {
+function NuevaMeta() {
   const t = useTema();
   const { bolsillos, ingresoMensual, metas } = useDatos();
   const [nombre, setNombre] = useState('');
@@ -162,3 +163,6 @@ export default function NuevaMeta() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(NuevaMeta, 'Nueva meta');

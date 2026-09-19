@@ -19,8 +19,9 @@ import { gastoPorCategoria } from '@/db/consultas';
 import { ultimosCiclos } from '@/core/fechas';
 import { useAjustes } from '@/store/ajustes';
 import { useDatos, conRefresco } from '@/store/datos';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function Presupuestos() {
+function Presupuestos() {
   const t = useTema();
   const diaInicio = useAjustes((s) => s.diaInicioCiclo);
   const { categoriasRaiz, ingresoMensual, revision, refrescar } = useDatos();
@@ -130,3 +131,6 @@ export default function Presupuestos() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Presupuestos, 'Presupuestos');

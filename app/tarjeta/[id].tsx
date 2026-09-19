@@ -22,8 +22,9 @@ import {
   borrarTarjeta, comprasACuotas, listarMovimientos, obtenerTarjeta, saldosTarjeta,
 } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
+import { conFrontera } from '@/ui/Frontera';
 
-export default function DetalleTarjeta() {
+function DetalleTarjeta() {
   const t = useTema();
   const { id } = useLocalSearchParams<{ id: string }>();
   const tarjetaId = Number(id);
@@ -162,3 +163,6 @@ export default function DetalleTarjeta() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(DetalleTarjeta, 'La tarjeta');

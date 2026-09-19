@@ -26,10 +26,11 @@ import { useDatos } from '@/store/datos';
 import { usePeriodo, rangoActual } from '@/store/periodo';
 import { useAjustes } from '@/store/ajustes';
 import { etiquetaCiclo } from '@/core/fechas';
+import { conFrontera } from '@/ui/Frontera';
 
 const PAGINA = 60;
 
-export default function Movimientos() {
+function Movimientos() {
   const t = useTema();
   const params = useLocalSearchParams<{ categoria?: string }>();
   const diaInicio = useAjustes((s) => s.diaInicioCiclo);
@@ -295,3 +296,6 @@ function Resumen({ etiqueta, valor, color }: { etiqueta: string; valor: string; 
     </View>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Movimientos, 'Movimientos');

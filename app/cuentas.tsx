@@ -20,6 +20,7 @@ import { COLORES_CATEGORIA } from '@/constantes/paleta';
 import { borrarCuenta, conciliarCuenta, crearCuenta, saldoCuenta } from '@/db/crud';
 import { useDatos, conRefresco } from '@/store/datos';
 import type { TipoCuenta } from '@/db/schema';
+import { conFrontera } from '@/ui/Frontera';
 
 const TIPOS: { id: TipoCuenta; texto: string; icono: string }[] = [
   { id: 'efectivo', texto: 'Efectivo', icono: 'cash-outline' },
@@ -28,7 +29,7 @@ const TIPOS: { id: TipoCuenta; texto: string; icono: string }[] = [
   { id: 'ahorro', texto: 'Ahorro', icono: 'wallet-outline' },
 ];
 
-export default function Cuentas() {
+function Cuentas() {
   const t = useTema();
   const { cuentas, revision, refrescar } = useDatos();
   const [hoja, setHoja] = useState(false);
@@ -208,3 +209,6 @@ export default function Cuentas() {
     </SafeAreaView>
   );
 }
+
+// Cada pantalla en su propia frontera: un fallo aqui no tumba la app.
+export default conFrontera(Cuentas, 'Cuentas y bolsillos');

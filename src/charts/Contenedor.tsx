@@ -3,6 +3,7 @@ import { View } from 'react-native';
 import { Tarjeta } from '@/ui/comp/Tarjeta';
 import { Texto } from '@/ui/comp/Texto';
 import { EstadoVacio } from '@/ui/comp/EstadoVacio';
+import { Frontera } from '@/ui/Frontera';
 import { esp } from '@/ui/tema';
 
 /** Envoltura comun: titulo, bajada y estado vacio con ilustracion. */
@@ -21,7 +22,11 @@ export function Grafico({
         </View>
         {accion}
       </View>
-      {hayDatos ? children : (
+      {/* Cada grafico dentro de su propia frontera: si la libreria de dibujo
+          falla con unos datos raros, se rompe esta tarjeta y solo esta. */}
+      {hayDatos ? (
+        <Frontera etiqueta={titulo} compacta>{children}</Frontera>
+      ) : (
         <EstadoVacio
           titulo="Aún no hay datos"
           mensaje={mensajeVacio ?? 'Registra algunos movimientos y este gráfico se llena solo.'}
