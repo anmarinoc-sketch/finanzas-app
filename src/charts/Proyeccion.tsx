@@ -14,6 +14,8 @@ export function Proyeccion({
   acumulado, diasTotales, presupuesto, ancho,
 }: { acumulado: number[]; diasTotales: number; presupuesto?: number; ancho: number }) {
   const t = useTema();
+  if (!acumulado.length || diasTotales < 1) return null;
+
   const dias = acumulado.length;
   const hoyVal = dias ? acumulado[dias - 1] : 0;
   const ritmo = dias > 0 ? hoyVal / dias : 0;

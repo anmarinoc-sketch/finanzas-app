@@ -13,7 +13,10 @@ export type BarraMes = { etiqueta: string; valor: number };
 export function BarrasMeses({ datos, ancho }: { datos: BarraMes[]; ancho: number }) {
   const t = useTema();
   const [sel, setSel] = useState<number | null>(null);
-  const promedio = datos.length ? datos.reduce((a, d) => a + d.valor, 0) / datos.length : 0;
+  // La librería accede a data[0] sin comprobarlo: sin datos, no se dibuja.
+  if (!datos.length) return null;
+
+  const promedio = datos.reduce((a, d) => a + d.valor, 0) / datos.length;
   const max = Math.max(1, ...datos.map((d) => d.valor));
   const anchoBarra = Math.max(14, Math.min(30, (ancho - 60) / datos.length - 12));
 

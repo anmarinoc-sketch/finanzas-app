@@ -18,7 +18,10 @@ export function LineaTendencia({
   etiquetaActual?: string; etiquetaAnterior?: string;
 }) {
   const t = useTema();
-  const finActual = actual.length ? actual[actual.length - 1] : 0;
+  // Igual que arriba: sin serie principal no hay nada que pintar.
+  if (!actual.length) return null;
+
+  const finActual = actual[actual.length - 1];
   const mismoDia = anterior[Math.min(anterior.length - 1, Math.max(0, actual.length - 1))] ?? 0;
   const dif = finActual - mismoDia;
   const max = Math.max(1, ...actual, ...anterior);
@@ -39,7 +42,7 @@ export function LineaTendencia({
 
       <LineChart
         data={actual.map((v) => ({ value: v }))}
-        data2={anterior.map((v) => ({ value: v }))}
+        data2={anterior.length ? anterior.map((v) => ({ value: v })) : undefined}
         color1={t.acento}
         color2={t.textoTenue}
         thickness1={3}

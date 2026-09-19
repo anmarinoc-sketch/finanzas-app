@@ -5,8 +5,9 @@ import { useTema } from '@/ui/TemaProvider';
 import { Texto } from '@/ui/comp/Texto';
 import { esp } from '@/ui/tema';
 import { formatoCorto } from '@/core/dinero';
+import { aColumnasApiladas, maximoApilado, type SerieApilada } from '@/core/graficos';
 
-export type SerieApilada = { nombre: string; color: string; valores: number[] };
+export type { SerieApilada } from '@/core/graficos';
 
 /** Composicion del gasto por categoria a lo largo de los periodos. */
 export function BarrasApiladas({
@@ -15,14 +16,11 @@ export function BarrasApiladas({
   const t = useTema();
   const anchoBarra = Math.max(16, Math.min(34, (ancho - 70) / Math.max(1, etiquetas.length) - 10));
 
-  const stackData = etiquetas.map((etq, i) => ({
-    label: etq,
-    stacks: series
-      .map((s) => ({ value: s.valores[i] ?? 0, color: s.color }))
-      .filter((s) => s.value > 0),
-  }));
+  const stackData = aColumnasApiladas(etiquetas, series);
+  const max = maximoApilado(stackData);
 
-  const max = Math.max(1, ...stackData.map((d) => d.stacks.reduce((a, s) => a + s.value, 0)));
+  // La librería lee stackData[0] sin comprobarlo: sin columnas, no se dibuja.
+  if (!stackData.length) return null;
 
   return (
     <View style={{ gap: esp.md }}>

@@ -153,7 +153,18 @@ la barra de navegación de Android. La barra de pestañas tenía altura fija y l
 de pila protegían solo el borde superior, así que en un Samsung con tres botones el
 sistema tapaba las etiquetas. Lo cubre `npm run areas`.
 
-**8. Acciones escondidas.** Eliminar una categoría exigía archivar → desplegar archivadas
+**9. Un array vacío dentro de la librería de gráficos.** `gifted-charts` lee
+`stackItem.stacks[0].barWidth` sin comprobar que el elemento exista, así que una columna
+apilada sin tramos lanza "Cannot read property 'barWidth' of undefined" y tumba toda la
+pantalla de Análisis. Ocurría con cualquier periodo sin gasto, algo normal en los meses
+previos a empezar a usar la app. **De aquí salió una pérdida de datos real**: Análisis se
+cerraba, tres cierres llevaban al modo recuperación, y allí el borrado no hacía copia
+previa. Lo cubre `tests/graficos.test.ts`, y la preparación de datos vive en
+`src/core/graficos.ts` para poder probarla sin montar la librería. Regla general: antes de
+pasar datos a gifted-charts, garantizar que ni el array principal ni sus sub-arrays estén
+vacíos, y poner un `return null` de guarda en cada componente de gráfico.
+
+**10. Acciones escondidas.** Eliminar una categoría exigía archivar → desplegar archivadas
 → borrar. Y en el paso 1 había que pulsar "Agregar" antes de "Continuar". Si una acción
 razonable necesita dos pasos no obvios, para el usuario simplemente no existe.
 
