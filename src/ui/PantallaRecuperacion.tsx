@@ -6,6 +6,7 @@ import { confirmarArranque, leerUltimoError, limpiarError } from '@/servicios/di
 import { migrar, vaciarDatos } from '@/db/bootstrap';
 import { sembrarCatalogos } from '@/db/seed';
 import { guardarUsuario, obtenerUsuario } from '@/db/crud';
+import { crearRespaldo } from '@/servicios/respaldoAuto';
 
 /**
  * Modo recuperación. Se muestra cuando la app se cerró dos veces seguidas
@@ -36,10 +37,17 @@ export function PantallaRecuperacion({ onContinuar }: { onContinuar: () => void 
     if (obtenerUsuario()) guardarUsuario({ onboardingCompleto: 0 });
   });
 
-  const borrarTodo = () => {
+const borrarTodo = () => {
+    // Copia primero. Una pérdida de datos real salió de ofrecer este botón
+    // sin respaldo previo, a alguien que solo quería recuperar su app.
+    const copia = crearRespaldo('antes-de-borrar');
     Alert.alert(
       'Borrar todos los datos',
-      'Se elimina todo lo registrado y la app vuelve al estado inicial. No se puede deshacer.',
+      copia
+        ? `Antes de borrar se guardó una copia con ${copia.registros} registros, dentro del teléfono. Podrás restaurarla desde Ajustes › Datos.
+
+¿Continuar?`
+        : 'No hay datos que respaldar. Se dejará la app en su estado inicial.',
       [
         { text: 'Cancelar', style: 'cancel' },
         {

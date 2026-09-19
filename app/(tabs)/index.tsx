@@ -26,6 +26,7 @@ import { useAjustes } from '@/store/ajustes';
 import { useDatos, conRefresco } from '@/store/datos';
 import { listarMovimientos, recurrentesVencidos, confirmarRecurrente, omitirRecurrente } from '@/db/crud';
 import { configurarNotificacionesUnaVez } from '@/servicios/notificaciones';
+import { respaldoDiarioSiToca } from '@/servicios/respaldoAuto';
 import { FilaMovimiento } from '@/ui/comp/FilaMovimiento';
 
 export default function Inicio() {
@@ -46,6 +47,13 @@ export default function Inicio() {
     const id = setTimeout(() => { configurarNotificacionesUnaVez(notificaciones); }, 2000);
     return () => clearTimeout(id);
   }, [notificaciones]);
+
+  // Copia automática diaria, en cuanto la app está estable. No molesta al
+  // usuario y es la red que faltaba: un borrado ya no puede llevárselo todo.
+  useEffect(() => {
+    const id = setTimeout(() => { respaldoDiarioSiToca(); }, 4000);
+    return () => clearTimeout(id);
+  }, []);
 
   const acumulado = useMemo(() => acumuladoDiario(r.rango), [r.rango, revision]);
   const acumuladoAnterior = useMemo(() => acumuladoDiario(r.anterior, false), [r.anterior, revision]);

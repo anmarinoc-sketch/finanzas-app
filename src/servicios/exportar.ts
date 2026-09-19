@@ -50,20 +50,29 @@ export async function exportarCSV(r: Rango, diaInicio: number) {
   return { nombre, filas: filas.length, etiqueta: etiquetaCiclo(r, diaInicio), total: filas.reduce((a: number, f: any) => a + (f.tipo === 'gasto' ? f.monto : 0), 0) };
 }
 
-/** Copia de seguridad completa en JSON (todas las tablas). */
-export async function exportarBackup() {
-  const tablas = [
-    'usuario', 'ingresos', 'bolsillos', 'categorias', 'cuentas', 'tarjetas',
-    'transacciones', 'recurrentes', 'metas', 'aportes_meta', 'deudas',
-  ];
+const TABLAS = [
+  'usuario', 'ingresos', 'bolsillos', 'categorias', 'cuentas', 'tarjetas',
+  'transacciones', 'recurrentes', 'metas', 'aportes_meta', 'deudas',
+];
+
+/** Volcado completo de la base, en el formato de la copia de seguridad. */
+export function volcarTodo(motivo = 'manual') {
   const datos: Record<string, any[]> = {};
-  for (const t of tablas) datos[t] = bdNativa.getAllSync(`SELECT * FROM ${t}`);
-  const payload = {
-    app: 'MisFinanzas',
-    version: 1,
+  for (const t of TABLAS) datos[t] = bdNativa.getAllSync(`SELECT * FROM ${t}`);
+  return {
+    app: 'MisFinanzas' as const,
+    version: 1 as const,
+    motivo,
     exportadoEn: new Date().toISOString(),
+    registros: Object.values(datos).reduce((a, v) => a + v.length, 0),
     datos,
   };
+}
+
+/** Copia de seguridad completa en JSON (todas las tablas). */
+export async function exportarBackup() {
+  const payload = volcarTodo('manual');
+  const datos = payload.datos;
   const nombre = `misfinanzas-copia-${iso(new Date())}.json`;
   await guardarYCompartir(nombre, JSON.stringify(payload, null, 2), 'application/json');
   const total = Object.values(datos).reduce((a, v) => a + v.length, 0);

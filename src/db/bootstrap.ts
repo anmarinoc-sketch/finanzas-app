@@ -6,12 +6,19 @@ import { bdNativa } from './cliente';
  * asi el proyecto compila sin correr drizzle-kit antes del build.
  * Para agregar cambios de esquema: se anade un elemento nuevo al final.
  */
-const MIGRACIONES: string[] = [
+/** Una migracion es SQL suelto, o una funcion cuando hace falta condicionarla. */
+type Migracion = string | (() => void);
+
+/** ¿La tabla ya tiene esa columna? Permite migraciones repetibles. */
+function tieneColumna(tabla: string, columna: string): boolean {
+  return bdNativa
+    .getAllSync<{ name: string }>(`PRAGMA table_info(${tabla})`)
+    .some((c) => c.name === columna);
+}
+
+const MIGRACIONES: Migracion[] = [
   // v1: esquema base
   `
-  PRAGMA journal_mode = WAL;
-  PRAGMA foreign_keys = ON;
-
   CREATE TABLE IF NOT EXISTS usuario (
     id INTEGER PRIMARY KEY,
     nombre TEXT NOT NULL DEFAULT 'Mi cuenta',
@@ -177,19 +184,43 @@ const MIGRACIONES: string[] = [
   `,
   // v3: segunda quincena. Un sueldo quincenal no siempre paga lo mismo las
   // dos veces, y suponerlo distorsionaba el ingreso mensual estimado.
-  `
-  ALTER TABLE ingresos ADD COLUMN monto_secundario INTEGER;
-  `,
+  // Se aplica desde codigo porque SQLite no tiene ADD COLUMN IF NOT EXISTS y
+  // reintentarla tenia que ser inofensivo.
+  () => {
+    if (!tieneColumna('ingresos', 'monto_secundario')) {
+      bdNativa.execSync('ALTER TABLE ingresos ADD COLUMN monto_secundario INTEGER');
+    }
+  },
 ];
+
+/**
+ * Ajustes de la conexion. Van aparte de las migraciones porque
+ * `PRAGMA journal_mode` no se puede ejecutar dentro de una transaccion.
+ */
+function configurarConexion() {
+  bdNativa.execSync('PRAGMA journal_mode = WAL');
+  bdNativa.execSync('PRAGMA foreign_keys = ON');
+}
 
 /** Aplica las migraciones pendientes. Devuelve la version final. */
 export function migrar(): number {
+  configurarConexion();
   const fila = bdNativa.getFirstSync<{ user_version: number }>('PRAGMA user_version');
   let version = fila?.user_version ?? 0;
+
   for (let i = version; i < MIGRACIONES.length; i++) {
-    bdNativa.execSync(MIGRACIONES[i]);
+    // Cada migracion y su numero de version se guardan JUNTOS, en una sola
+    // transaccion. Antes eran dos escrituras separadas: si la app moria entre
+    // ellas, el siguiente arranque reintentaba la migracion, el ALTER TABLE
+    // fallaba con "duplicate column name" y la app quedaba atrapada en modo
+    // recuperacion. De ahi salio una perdida de datos real.
+    const paso = MIGRACIONES[i];
+    bdNativa.withTransactionSync(() => {
+      if (typeof paso === 'string') bdNativa.execSync(paso);
+      else paso();
+      bdNativa.execSync(`PRAGMA user_version = ${i + 1}`);
+    });
     version = i + 1;
-    bdNativa.execSync(`PRAGMA user_version = ${version}`);
   }
   return version;
 }

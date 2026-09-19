@@ -1,8 +1,10 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Alert, ScrollView, View } from 'react-native';
 import { router } from 'expo-router';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
+import { format } from 'date-fns';
+import { es } from 'date-fns/locale';
 import * as DocumentPicker from 'expo-document-picker';
 
 import { useTema } from '@/ui/TemaProvider';
@@ -19,6 +21,7 @@ import { borrarMovimientos, vaciarDatos, migrar } from '@/db/bootstrap';
 import { hayDatos, sembrarCatalogos, sembrarEjemplo } from '@/db/seed';
 import { contarMovimientos } from '@/db/crud';
 import { rangoActual } from '@/store/periodo';
+import { crearRespaldo, listarRespaldos, restaurarRespaldo } from '@/servicios/respaldoAuto';
 import { useAjustes } from '@/store/ajustes';
 import { useDatos } from '@/store/datos';
 
@@ -28,6 +31,10 @@ export default function Datos() {
   const cargarAjustes = useAjustes((s) => s.cargar);
   const { ingresoMensual, refrescar, revision } = useDatos();
   const [ocupado, setOcupado] = useState<string | null>(null);
+  const [respaldos, setRespaldos] = useState(() => listarRespaldos());
+
+  // Se recalcula con cada revisión: así la lista refleja las copias nuevas.
+  useEffect(() => { setRespaldos(listarRespaldos()); }, [revision]);
 
   const total = contarMovimientos();
   const rango = rangoActual(diaInicio, 0);
@@ -77,7 +84,10 @@ export default function Datos() {
   };
 
   const borrarEjemplo = () => {
-    Alert.alert('Borrar movimientos', 'Se eliminan todos los movimientos y aportes. La configuración se conserva.', [
+    const copia = crearRespaldo('antes-de-borrar-movimientos');
+    Alert.alert('Borrar movimientos', `Se eliminan todos los movimientos y aportes. La configuración se conserva.${copia ? `
+
+Se guardó una copia con ${copia.registros} registros: se puede restaurar más abajo.` : ''}`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Borrar', style: 'destructive',
@@ -87,7 +97,10 @@ export default function Datos() {
   };
 
   const empezarDeCero = () => {
-    Alert.alert('Empezar de cero', 'Se borra TODO: movimientos, categorías, metas, tarjetas y preferencias.', [
+    const copia = crearRespaldo('antes-de-empezar-de-cero');
+    Alert.alert('Empezar de cero', `Se borra TODO: movimientos, categorías, metas, tarjetas y preferencias.${copia ? `
+
+Se guardó una copia con ${copia.registros} registros: se puede restaurar más abajo.` : ''}`, [
       { text: 'Cancelar', style: 'cancel' },
       {
         text: 'Borrar todo', style: 'destructive',
@@ -151,6 +164,67 @@ export default function Datos() {
           cargando={ocupado === 'importar'}
           onPress={restaurar}
         />
+
+        <Tarjeta style={{ gap: esp.md }}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: esp.md }}>
+            <View style={{
+              width: 40, height: 40, borderRadius: radio.md, backgroundColor: t.verdeFondo,
+              alignItems: 'center', justifyContent: 'center',
+            }}>
+              <Ionicons name="time-outline" size={20} color={t.verde} />
+            </View>
+            <Texto variante="seccion" style={{ flex: 1 }}>Copias automáticas</Texto>
+          </View>
+          <Texto variante="micro" color="suave" style={{ lineHeight: 18 }}>
+            La app guarda una copia al día dentro del teléfono, y otra justo antes de
+            cualquier borrado. Se conservan las 8 más recientes.
+          </Texto>
+
+          {respaldos.length === 0 ? (
+            <Texto variante="micro" color="tenue">Todavía no hay copias automáticas.</Texto>
+          ) : respaldos.map((r) => (
+            <View key={r.uri} style={{
+              flexDirection: 'row', alignItems: 'center', gap: esp.md,
+              borderTopWidth: 1, borderTopColor: t.borde, paddingTop: esp.md,
+            }}>
+              <View style={{ flex: 1 }}>
+                <Texto variante="cuerpo">
+                  {format(r.fecha, "d 'de' MMM, HH:mm", { locale: es })}
+                </Texto>
+                <Texto variante="micro" color="tenue">
+                  {r.registros} registros · {r.motivo.replace(/-/g, ' ')}
+                </Texto>
+              </View>
+              <Boton
+                titulo="Restaurar"
+                variante="secundario"
+                onPress={() => Alert.alert(
+                  'Restaurar esta copia',
+                  `Se reemplazarán los datos actuales por los de la copia del ${format(r.fecha, "d 'de' MMMM 'a las' HH:mm", { locale: es })} (${r.registros} registros).
+
+Antes se guardará una copia del estado actual.`,
+                  [
+                    { text: 'Cancelar', style: 'cancel' },
+                    {
+                      text: 'Restaurar',
+                      onPress: () => {
+                        try {
+                          const res = restaurarRespaldo(r.uri);
+                          cargarAjustes();
+                          refrescar();
+                          setRespaldos(listarRespaldos());
+                          Alert.alert('Restaurado', `Se recuperaron ${res.registros} registros.`);
+                        } catch (e: any) {
+                          Alert.alert('No se pudo restaurar', e?.message ?? 'Archivo dañado.');
+                        }
+                      },
+                    },
+                  ],
+                )}
+              />
+            </View>
+          ))}
+        </Tarjeta>
 
         <View style={{ height: 1, backgroundColor: t.borde, marginVertical: esp.sm }} />
 

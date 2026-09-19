@@ -20,6 +20,7 @@ import {
   guardarDistribucion, guardarUsuario, listarBolsillos, listarCategorias,
   listarCategoriasRaiz, listarCuentas, listarDeudas, listarIngresos,
   listarMetas, listarMovimientos, listarRecurrentes, listarTarjetas, reemplazarIngresos,
+  contarMovimientos,
   obtenerUsuario, recurrentesVencidos, saldoConsolidado,
 } from '../src/db/crud';
 import {
@@ -221,5 +222,36 @@ suite('un bolsillo borrado no vuelve', () => {
     const i = listarIngresos()[0];
     expect(i.montoSecundario).toBe(2_400_000);
     expect(mensualDeIngreso(i)).toBe(4_200_000);
+  });
+});
+
+suite('las migraciones no pueden dejar la app atrapada', () => {
+  test('reintentar una migración ya aplicada no lanza', () => {
+    // Escenario real que causó una pérdida de datos: la app murió entre
+    // aplicar la migración y anotar la versión, y en el siguiente arranque
+    // el ALTER TABLE fallaba con "duplicate column name". Desde entonces
+    // cada migración y su versión van en la misma transacción, y la v3 es
+    // repetible. Forzar la versión hacia atrás debe ser inofensivo.
+    bdNativa.execSync('PRAGMA user_version = 2');
+    expect(() => migrar()).not.toThrow();
+    expect(bdNativa.getFirstSync<{ user_version: number }>('PRAGMA user_version')!.user_version).toBe(3);
+
+    // Y desde cero también, varias veces seguidas.
+    bdNativa.execSync('PRAGMA user_version = 0');
+    expect(() => { migrar(); migrar(); migrar(); }).not.toThrow();
+  });
+
+  test('reintentar las migraciones no borra ningún dato', () => {
+    const antes = contarMovimientos();
+    const ingresosAntes = listarIngresos().length;
+    bdNativa.execSync('PRAGMA user_version = 0');
+    migrar();
+    expect(contarMovimientos()).toBe(antes);
+    expect(listarIngresos()).toHaveLength(ingresosAntes);
+  });
+
+  test('la columna de la segunda quincena sigue ahí tras reaplicar', () => {
+    const cols = bdNativa.getAllSync<{ name: string }>('PRAGMA table_info(ingresos)').map((c) => c.name);
+    expect(cols.filter((c) => c === 'monto_secundario')).toHaveLength(1);
   });
 });
