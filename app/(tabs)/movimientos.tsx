@@ -20,8 +20,9 @@ import { IconoCategoria } from '@/ui/comp/IconoCategoria';
 import { esp, radio, TOQUE_MIN } from '@/ui/tema';
 
 import { formatoCOP, parsearMonto, separarMiles } from '@/core/dinero';
-import { MEDIOS_PAGO } from '@/constantes/medios';
+import { mediosParaFiltro } from '@/constantes/medios';
 import { listarMovimientos, totalesMovimientos, type MovimientoVista } from '@/db/crud';
+import { mediosUsados } from '@/db/consultas';
 import { useDatos } from '@/store/datos';
 import { usePeriodo, rangoActual } from '@/store/periodo';
 import { useAjustes } from '@/store/ajustes';
@@ -51,6 +52,11 @@ function Movimientos() {
   useFocusEffect(useCallback(() => { refrescar(); }, [refrescar]));
 
   const rango = rangoActual(diaInicio, offset);
+
+  // Los medios elegibles hoy, mas los antiguos que de verdad estan en el
+  // historial: asi no se filtra por algo que no existe, ni queda un gasto
+  // imposible de encontrar por su medio de pago.
+  const mediosFiltrables = useMemo(() => mediosParaFiltro(mediosUsados()), [revision]);
 
   // El filtro sin la pagina: los totales no dependen de cuanto se haya cargado.
   const filtroBase = useMemo(() => ({
@@ -232,7 +238,7 @@ function Movimientos() {
         <View style={{ gap: 6 }}>
           <Texto variante="etiqueta" color="suave">Medio de pago</Texto>
           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: esp.sm }}>
-            {MEDIOS_PAGO.map((m) => (
+            {mediosFiltrables.map((m) => (
               <Chip key={m.id} texto={m.nombre} compacto color={m.color} activo={medios.includes(m.id)} onPress={() => alternar(medios, m.id, setMedios)} />
             ))}
           </View>

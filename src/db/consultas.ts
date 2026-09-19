@@ -144,6 +144,17 @@ export function topComercios(r: Rango, limite = 10) {
   return [...mapa.values()].sort((a, b) => b.total - a.total).slice(0, limite);
 }
 
+/**
+ * Medios de pago que aparecen en el historial. Los filtros muestran los
+ * elegibles hoy mas estos, para que ningun movimiento antiguo quede sin forma
+ * de encontrarse por su medio de pago.
+ */
+export function mediosUsados(): string[] {
+  return bdNativa
+    .getAllSync<{ medio: string }>('SELECT DISTINCT medio_pago AS medio FROM transacciones')
+    .map((f) => f.medio);
+}
+
 /** Totales de gasto e ingreso para cada uno de los rangos dados (barras mes a mes). */
 export function totalesPorRangos(rangos: Rango[]) {
   return rangos.map((r) => ({ rango: r, ...totalesPeriodo(r) }));

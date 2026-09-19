@@ -141,7 +141,7 @@ export function sembrarEjemplo() {
       const prox = new Date(hoy.getFullYear(), hoy.getMonth() + (hoy.getDate() > dia ? 1 : 0), dia);
       db.insert(recurrentes).values({
         descripcion, monto, frecuencia: frecuencia as any, categoriaId: c?.id ?? null,
-        cuentaId: cuentaBanco, medioPago: 'debito', proximaFecha: iso(prox),
+        cuentaId: cuentaBanco, medioPago: 'transferencia', proximaFecha: iso(prox),
         activo: 1, esSuscripcion: susc, tipo: 'gasto',
       }).run();
     };
@@ -185,7 +185,9 @@ export function sembrarEjemplo() {
 
   // --- 3 meses de movimientos ---
   const inicio = startOfMonth(subMonths(hoy, 2));
-  const medios = ['efectivo', 'debito', 'nequi', 'credito', 'daviplata'] as const;
+  // Los medios que hoy se pueden elegir. Las compras a cuotas de mas abajo
+  // siguen en 'credito', que es lo que alimenta el modulo de tarjetas.
+  const medios = ['efectivo', 'transferencia', 'mixto'] as const;
   const cuentasPosibles = [cuentaBanco, cuentaEfectivo, cuentaNequi];
 
   const plan: { cat: string; min: number; max: number; porMes: number }[] = [
@@ -244,7 +246,7 @@ export function sembrarEjemplo() {
         const subId = cat === 'Servicios públicos' ? sub(desc)?.id ?? null : null;
         crearTransaccion({
           tipo: 'gasto', monto, fecha: iso(f), categoriaId: subId ?? c?.id ?? null,
-          subcategoriaId: subId, cuentaId: cuentaBanco, medioPago: 'debito',
+          subcategoriaId: subId, cuentaId: cuentaBanco, medioPago: 'transferencia',
           descripcion: desc, etiquetas: 'fijo', creadoEn: iso(f),
         } as any);
       }

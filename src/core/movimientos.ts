@@ -1,4 +1,4 @@
-import { MEDIOS_PAGO } from '@/constantes/medios';
+import { TODOS_LOS_MEDIOS } from '@/constantes/medios';
 
 /**
  * Qué texto encabeza una fila del historial.
@@ -28,8 +28,9 @@ function normalizar(texto: string): string {
  * palabras que la fila ya muestra por otro lado, así que como título sobran.
  */
 const FORMAS_DE_PAGO = new Set<string>([
-  ...MEDIOS_PAGO.map((m) => normalizar(m.nombre)),
-  ...MEDIOS_PAGO.map((m) => normalizar(m.id)),
+  ...TODOS_LOS_MEDIOS.map((m) => normalizar(m.nombre)),
+  ...TODOS_LOS_MEDIOS.map((m) => normalizar(m.id)),
+  'mixto', 'efectivo y transferencia',
   'transferencia', 'transferencias', 'transf', 'efectivo', 'cuenta',
   'cuenta de ahorros', 'cuenta corriente', 'ahorros', 'tarjeta',
   'tarjeta debito', 'tarjeta credito', 'debito', 'credito', 'pse', 'qr',

@@ -26,7 +26,7 @@ import {
   formatoCOP, insertarDigitos, separarMiles,
 } from '@/core/dinero';
 import { cuotaMensual } from '@/core/cuotas';
-import { MEDIOS_PAGO } from '@/constantes/medios';
+import { MEDIOS_PAGO, MEDIO_CREDITO } from '@/constantes/medios';
 import { useDatos, conRefresco } from '@/store/datos';
 import { useAjustes } from '@/store/ajustes';
 import { usePeriodo } from '@/store/periodo';
@@ -137,6 +137,15 @@ function Registro() {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [editandoId]);
+
+  // Los tres medios de siempre, y la tarjeta de credito solo si hay alguna
+  // registrada: sin eso, el modulo de tarjetas y cuotas no tendria por donde
+  // alimentarse; con eso, quien no usa tarjeta no ve una opcion que no le sirve.
+  const mediosElegibles = useMemo(
+    () => (tarjetas.length > 0 ? [...MEDIOS_PAGO, MEDIO_CREDITO] : MEDIOS_PAGO),
+    [tarjetas.length],
+  );
+  const detalleMedio = mediosElegibles.find((m) => m.id === medio)?.detalle ?? null;
 
   // Al elegir tarjeta de credito el medio pasa a credito y viceversa.
   useEffect(() => {
@@ -325,13 +334,17 @@ function Registro() {
         <View style={{ gap: 6 }}>
           <Texto variante="etiqueta" color="suave">Medio de pago</Texto>
           <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: esp.sm }}>
-            {MEDIOS_PAGO.map((m) => (
+            {mediosElegibles.map((m) => (
               <Chip
                 key={m.id} texto={m.nombre} icono={m.icono as any} compacto
                 color={m.color} activo={medio === m.id} onPress={() => setMedio(m.id)}
               />
             ))}
           </ScrollView>
+          {/* La aclaracion solo aparece cuando hace falta: "Mixto" no se explica solo. */}
+          {detalleMedio ? (
+            <Texto variante="micro" color="tenue">{detalleMedio}</Texto>
+          ) : null}
         </View>
 
         {medio === 'credito' ? (

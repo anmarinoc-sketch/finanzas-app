@@ -11,7 +11,12 @@ import { index, integer, real, sqliteTable, text } from 'drizzle-orm/sqlite-core
  * ------------------------------------------------------------------ */
 
 export type TipoTransaccion = 'gasto' | 'ingreso' | 'transferencia';
-export type MedioPago = 'efectivo' | 'debito' | 'credito' | 'transferencia' | 'nequi' | 'daviplata' | 'otro';
+// 'mixto' = pagado en parte en efectivo y en parte por transferencia.
+// Los demas siguen en el tipo porque hay movimientos registrados con ellos,
+// aunque ya no se ofrezcan al registrar (ver src/constantes/medios.ts).
+export type MedioPago =
+  | 'efectivo' | 'transferencia' | 'mixto'
+  | 'debito' | 'credito' | 'nequi' | 'daviplata' | 'otro';
 export type Frecuencia =
   | 'diaria' | 'semanal' | 'quincenal' | 'mensual' | 'bimestral'
   | 'trimestral' | 'semestral' | 'anual' | 'ocasional';

@@ -31,8 +31,9 @@ import { capitalizar, fmtMesCorto, ultimosCiclos, type Rango } from '@/core/fech
 import {
   gastoPorCategoria, gastoPorDia, gastoPorMedio, topComercios,
   totalCategoriaEnRango, totalesPeriodo,
+  mediosUsados,
 } from '@/db/consultas';
-import { MEDIOS_PAGO } from '@/constantes/medios';
+import { mediosParaFiltro, nombreMedio, infoMedio } from '@/constantes/medios';
 import { useResumen, acumuladoDiario } from '@/hooks/useResumen';
 import { useAjustes } from '@/store/ajustes';
 import { useDatos } from '@/store/datos';
@@ -60,6 +61,11 @@ function Analisis() {
   const [medio, setMedio] = useState<string | null>(null);
 
   useFocusEffect(useCallback(() => { refrescar(); }, [refrescar]));
+
+  // Los medios elegibles hoy, mas los antiguos que de verdad estan en el
+  // historial: asi no se filtra por algo que no existe, ni queda un gasto
+  // imposible de encontrar por su medio de pago.
+  const mediosFiltrables = useMemo(() => mediosParaFiltro(mediosUsados()), [revision]);
 
   /** Rango efectivo segun el alcance elegido. */
   const rango: Rango = useMemo(() => {
@@ -169,7 +175,7 @@ function Analisis() {
 
         <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={{ gap: esp.sm }}>
           <Chip texto="Todos los medios" compacto activo={!medio} onPress={() => setMedio(null)} />
-          {MEDIOS_PAGO.map((m) => (
+          {mediosFiltrables.map((m) => (
             <Chip key={m.id} texto={m.nombre} compacto color={m.color} activo={medio === m.id} onPress={() => setMedio(medio === m.id ? null : m.id)} />
           ))}
         </ScrollView>
@@ -191,7 +197,7 @@ function Analisis() {
         {/* 1. Dona por categoria */}
         <Grafico
           titulo="Distribución por categoría"
-          bajada={medio ? `Solo ${MEDIOS_PAGO.find((m) => m.id === medio)?.nombre}` : etiquetaRango}
+          bajada={medio ? `Solo ${nombreMedio(medio)}` : etiquetaRango}
           hayDatos={categorias.length > 0}
         >
           <Dona
@@ -320,7 +326,7 @@ function Analisis() {
         <Grafico titulo="Por medio de pago" hayDatos={medios.length > 0}>
           <View style={{ gap: esp.md }}>
             {medios.map((m) => {
-              const info = MEDIOS_PAGO.find((x) => x.id === m.medio);
+              const info = infoMedio(m.medio);
               const total = medios.reduce((a, x) => a + x.total, 0);
               return (
                 <View key={m.medio} style={{ gap: 6 }}>

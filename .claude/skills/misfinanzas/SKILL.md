@@ -42,7 +42,7 @@ compilación: hay `paths-ignore: ['**.md']` y se puede añadir `[skip ci]` al co
 npm run verificar
 ```
 
-   Revisa tipos, rutas duplicadas, áreas seguras, fronteras de error y las 125
+   Revisa tipos, rutas duplicadas, áreas seguras, fronteras de error y las 140
    pruebas. Es exactamente lo que corre la CI.
    Para cambios que tocan dependencias o configuración nativa, además:
 
@@ -73,6 +73,7 @@ teléfono. Por eso existe el modo recuperación.
 | Una frase de insight nueva | `src/core/insights.ts` (es función pura, se prueba sola) |
 | Colores, tipografía, espaciado | `src/ui/tema.ts` |
 | Categorías o medios de pago precargados | `src/constantes/` |
+| Añadir o quitar un medio de pago | `MEDIOS_PAGO` en `src/constantes/medios.ts`; el que se quite pasa a `MEDIOS_ANTERIORES`, **nunca se borra** |
 | Pasos del onboarding | `app/onboarding/` + el borrador en `src/store/onboarding.ts` |
 | Exportar, PDF, copia de seguridad | `src/servicios/` |
 | Que una pantalla nueva no pueda tumbar la app | `export default conFrontera(X, 'Nombre')` al final del archivo |
@@ -272,6 +273,14 @@ profunda:
    seguridad). Las tres anteriores están en el mismo teléfono: si se pierde, se van con
    él. Por eso la app lleva la cuenta de cuándo fue la última y lo recuerda al pasar
    30 días.
+
+**Un medio de pago que se deja de ofrecer no se borra.** Se mueve a
+`MEDIOS_ANTERIORES` en `src/constantes/medios.ts`. Si desapareciera, los movimientos ya
+registrados con él pasarían a leerse como "Otro" en el historial y en los gráficos: sería
+reescribir el pasado. Los filtros muestran los elegibles hoy más los antiguos que de
+verdad aparecen en el historial (`mediosParaFiltro` + `mediosUsados`), para que ningún
+gasto quede imposible de encontrar. Hoy se ofrecen tres —efectivo, transferencia y
+mixto— más la tarjeta de crédito si hay alguna registrada. Lo cubre `tests/medios.test.ts`.
 
 Y una regla de coherencia, del mismo peso: **un mismo concepto en el mismo periodo da el
 mismo número en todas las pantallas.** Los totales se suman en SQL sobre todo lo filtrado,

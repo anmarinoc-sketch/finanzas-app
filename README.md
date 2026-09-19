@@ -1,8 +1,8 @@
 # Mis Finanzas
 
 App Android de gestión de gastos personales, pensada para Colombia: pesos colombianos,
-español, ciclos que no empiezan el día 1, tarjetas con día de corte y de pago, compras
-a cuotas, Nequi y Daviplata como medios de pago.
+español, ciclos que no empiezan el día 1, tarjetas con día de corte y de pago y compras
+a cuotas.
 
 **Funciona 100% sin internet.** No hay backend, no hay cuenta de usuario y no se envía
 ni un byte fuera del teléfono. Todo vive en una base SQLite local.
@@ -428,7 +428,13 @@ del bolsillo de *Necesidades*. El resto es variable. Es la base del gráfico de 
 **Registro de movimientos**
 - Teclado numérico propio con tecla `000`, pensado para registrar un gasto en menos de 5 segundos.
 - Gasto, ingreso extra y transferencia entre cuentas (las transferencias nunca se cuentan como gasto).
-- Categoría con íconos y colores, subcategoría, fecha con atajos Hoy/Ayer/Antier más calendario, 7 medios de pago incluyendo Nequi y Daviplata, descripción, notas y etiquetas libres.
+- Categoría con íconos y colores, subcategoría, fecha con atajos Hoy/Ayer/Antier más
+  calendario, medio de pago, descripción, notas y etiquetas libres.
+- Medios de pago: **efectivo, transferencia y mixto** (efectivo y transferencia). La
+  tarjeta de crédito aparece como cuarta opción solo si hay alguna tarjeta registrada,
+  porque es lo que alimenta el módulo de cuotas. Los medios que la app ofreció antes
+  (débito, Nequi, Daviplata) siguen reconociéndose para que los movimientos ya
+  registrados conserven su nombre; ver `src/constantes/medios.ts`.
 - Foto del recibo desde cámara o galería.
 - Marcar como recurrente con su frecuencia.
 - Tarjeta de crédito con 1 a 36 cuotas, cuota mensual calculada en vivo y reparto automático mes a mes.
